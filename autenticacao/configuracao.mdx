@@ -1,0 +1,525 @@
+---
+title: Configuração de Autenticação
+description: 'Guia completo para configurar autenticação em diferentes ambientes'
+---
+
+# Configuração de Autenticação
+
+Este guia mostra como configurar suas credenciais de acesso à API Speedio de forma segura em diferentes ambientes e plataformas.
+
+## Configuração por Ambiente
+
+### Desenvolvimento Local
+
+#### 1. Usando Arquivo .env
+
+Crie um arquivo `.env` na raiz do seu projeto:
+
+```bash .env
+SPEEDIO_USERNAME=seu_usuario
+SPEEDIO_PASSWORD=sua_senha_segura
+```
+
+<Warning>
+  **Importante**: Adicione `.env` ao seu `.gitignore` para não comitar credenciais.
+</Warning>
+
+```bash .gitignore
+# Credenciais
+.env
+.env.local
+.env.*.local
+```
+
+#### 2. Usando Variáveis do Sistema
+
+**Linux/macOS:**
+```bash
+# Adicione ao ~/.bashrc ou ~/.zshrc
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha_segura"
+
+# Recarregue o shell
+source ~/.bashrc
+```
+
+**Windows:**
+```cmd
+# Command Prompt
+set SPEEDIO_USERNAME=seu_usuario
+set SPEEDIO_PASSWORD=sua_senha_segura
+
+# PowerShell
+$env:SPEEDIO_USERNAME="seu_usuario"
+$env:SPEEDIO_PASSWORD="sua_senha_segura"
+```
+
+### Produção
+
+#### Docker
+
+```dockerfile Dockerfile
+# Dockerfile
+FROM node:18-alpine
+
+# Definir variáveis de ambiente de build
+ARG SPEEDIO_USERNAME
+ARG SPEEDIO_PASSWORD
+
+ENV SPEEDIO_USERNAME=$SPEEDIO_USERNAME
+ENV SPEEDIO_PASSWORD=$SPEEDIO_PASSWORD
+
+COPY . .
+RUN npm install
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+```yaml docker-compose.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    environment:
+      - SPEEDIO_USERNAME=${SPEEDIO_USERNAME}
+      - SPEEDIO_PASSWORD=${SPEEDIO_PASSWORD}
+    ports:
+      - "3000:3000"
+```
+
+#### Kubernetes
+
+```yaml speedio-secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: speedio-credentials
+type: Opaque
+stringData:
+  username: testuser
+  password: spdtestuser
+```
+
+```yaml deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-client
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: seu-app:latest
+        env:
+        - name: SPEEDIO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: speedio-credentials
+              key: username
+        - name: SPEEDIO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: speedio-credentials
+              key: password
+```
+
+## Configuração por Linguagem
+
+### Node.js
+
+#### Usando dotenv
+
+```bash
+npm install dotenv
+```
+
+```javascript config.js
+require('dotenv').config();
+
+const config = {
+  speedio: {
+    username: process.env.SPEEDIO_USERNAME,
+    password: process.env.SPEEDIO_PASSWORD,
+    baseUrl: 'https://api-get-leads.speedio.com.br'
+  }
+};
+
+// Validação
+if (!config.speedio.username || !config.speedio.password) {
+  throw new Error('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias');
+}
+
+module.exports = config;
+```
+
+#### Função de Autenticação
+
+```javascript auth.js
+const config = require('./config');
+
+function getAuthHeader() {
+  const { username, password } = config.speedio;
+  const auth = Buffer.from(`${username}:${password}`).toString('base64');
+  return `Basic ${auth}`;
+}
+
+function createHeaders() {
+  return {
+    'Authorization': getAuthHeader(),
+    'Content-Type': 'application/json'
+  };
+}
+
+module.exports = { getAuthHeader, createHeaders };
+```
+
+### Python
+
+#### Usando python-dotenv
+
+```bash
+pip install python-dotenv requests
+```
+
+```python config.py
+import os
+from dotenv import load_dotenv
+
+# Carrega variáveis do arquivo .env
+load_dotenv()
+
+class SpeedioConfig:
+    USERNAME = os.getenv('SPEEDIO_USERNAME')
+    PASSWORD = os.getenv('SPEEDIO_PASSWORD')
+    BASE_URL = 'https://api-get-leads.speedio.com.br'
+    
+    @classmethod
+    def validate(cls):
+        if not cls.USERNAME or not cls.PASSWORD:
+            raise ValueError('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias')
+
+# Validar configuração na inicialização
+SpeedioConfig.validate()
+```
+
+#### Cliente de API
+
+```python speedio_client.py
+import base64
+import requests
+from config import SpeedioConfig
+
+class SpeedioClient:
+    def __init__(self):
+        self.base_url = SpeedioConfig.BASE_URL
+        self.auth_header = self._create_auth_header()
+    
+    def _create_auth_header(self):
+        credentials = f"{SpeedioConfig.USERNAME}:{SpeedioConfig.PASSWORD}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+        return f"Basic {encoded}"
+    
+    def _get_headers(self):
+        return {
+            'Authorization': self.auth_header,
+            'Content-Type': 'application/json'
+        }
+    
+    def buscar_cnpj(self, cnpjs):
+        url = f"{self.base_url}/search_enriched_leads/cnpj"
+        params = {'cnpjs': json.dumps(cnpjs)}
+        
+        response = requests.get(url, params=params, headers=self._get_headers())
+        response.raise_for_status()
+        return response.json()
+```
+
+### PHP
+
+#### Usando vlucas/phpdotenv
+
+```bash
+composer require vlucas/phpdotenv
+```
+
+```php config.php
+<?php
+require_once 'vendor/autoload.php';
+
+use Dotenv\Dotenv;
+
+// Carrega variáveis do .env
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+class SpeedioConfig {
+    public static function getUsername() {
+        return $_ENV['SPEEDIO_USERNAME'] ?? null;
+    }
+    
+    public static function getPassword() {
+        return $_ENV['SPEEDIO_PASSWORD'] ?? null;
+    }
+    
+    public static function getBaseUrl() {
+        return 'https://api-get-leads.speedio.com.br';
+    }
+    
+    public static function validate() {
+        if (!self::getUsername() || !self::getPassword()) {
+            throw new Exception('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias');
+        }
+    }
+}
+
+// Validar na inicialização
+SpeedioConfig::validate();
+?>
+```
+
+#### Cliente de API
+
+```php SpeedioClient.php
+<?php
+require_once 'config.php';
+
+class SpeedioClient {
+    private $baseUrl;
+    private $authHeader;
+    
+    public function __construct() {
+        $this->baseUrl = SpeedioConfig::getBaseUrl();
+        $this->authHeader = $this->createAuthHeader();
+    }
+    
+    private function createAuthHeader() {
+        $credentials = SpeedioConfig::getUsername() . ':' . SpeedioConfig::getPassword();
+        $encoded = base64_encode($credentials);
+        return 'Basic ' . $encoded;
+    }
+    
+    private function getHeaders() {
+        return [
+            'Authorization: ' . $this->authHeader,
+            'Content-Type: application/json'
+        ];
+    }
+    
+    public function buscarCnpj($cnpjs) {
+        $url = $this->baseUrl . '/search_enriched_leads/cnpj';
+        $params = http_build_query(['cnpjs' => json_encode($cnpjs)]);
+        
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url . '?' . $params,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $this->getHeaders()
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        
+        if ($httpCode !== 200) {
+            throw new Exception("Erro na API: HTTP $httpCode");
+        }
+        
+        return json_decode($response, true);
+    }
+}
+?>
+```
+
+## Configuração em Nuvem
+
+### AWS
+
+#### AWS Secrets Manager
+
+```bash
+# Criar secret
+aws secretsmanager create-secret \
+  --name "speedio-api-credentials" \
+  --secret-string '{"username":"testuser","password":"spdtestuser"}'
+```
+
+```javascript aws-config.js
+const AWS = require('aws-sdk');
+const secretsManager = new AWS.SecretsManager();
+
+async function getSpeedioCredentials() {
+  try {
+    const result = await secretsManager.getSecretValue({
+      SecretId: 'speedio-api-credentials'
+    }).promise();
+    
+    const secret = JSON.parse(result.SecretString);
+    return {
+      username: secret.username,
+      password: secret.password
+    };
+  } catch (error) {
+    throw new Error('Erro ao recuperar credenciais: ' + error.message);
+  }
+}
+```
+
+### Google Cloud
+
+#### Secret Manager
+
+```bash
+# Criar secrets
+gcloud secrets create speedio-username --data-file=<(echo -n "testuser")
+gcloud secrets create speedio-password --data-file=<(echo -n "spdtestuser")
+```
+
+```javascript gcp-config.js
+const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const client = new SecretManagerServiceClient();
+
+async function getSpeedioCredentials() {
+  const [usernameResponse] = await client.accessSecretVersion({
+    name: 'projects/YOUR_PROJECT/secrets/speedio-username/versions/latest',
+  });
+  
+  const [passwordResponse] = await client.accessSecretVersion({
+    name: 'projects/YOUR_PROJECT/secrets/speedio-password/versions/latest',
+  });
+  
+  return {
+    username: usernameResponse.payload.data.toString(),
+    password: passwordResponse.payload.data.toString()
+  };
+}
+```
+
+### Azure
+
+#### Key Vault
+
+```bash
+# Criar secrets
+az keyvault secret set --vault-name "SeuKeyVault" --name "speedio-username" --value "testuser"
+az keyvault secret set --vault-name "SeuKeyVault" --name "speedio-password" --value "spdtestuser"
+```
+
+```javascript azure-config.js
+const { DefaultAzureCredential } = require("@azure/identity");
+const { SecretClient } = require("@azure/keyvault-secrets");
+
+const credential = new DefaultAzureCredential();
+const client = new SecretClient("https://SeuKeyVault.vault.azure.net/", credential);
+
+async function getSpeedioCredentials() {
+  const username = await client.getSecret("speedio-username");
+  const password = await client.getSecret("speedio-password");
+  
+  return {
+    username: username.value,
+    password: password.value
+  };
+}
+```
+
+## Validação e Teste
+
+### Teste de Conectividade
+
+```bash test-auth.sh
+#!/bin/bash
+
+# Verificar se as variáveis estão definidas
+if [ -z "$SPEEDIO_USERNAME" ] || [ -z "$SPEEDIO_PASSWORD" ]; then
+    echo "❌ Erro: SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas"
+    exit 1
+fi
+
+# Testar autenticação
+echo "🔑 Testando autenticação..."
+
+response=$(curl -s -I \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]')
+
+if echo "$response" | grep -q "200 OK"; then
+    echo "✅ Autenticação bem-sucedida!"
+else
+    echo "❌ Falha na autenticação"
+    echo "$response"
+    exit 1
+fi
+```
+
+### Monitoramento
+
+```javascript monitoring.js
+const config = require('./config');
+
+function logAuthAttempt(success, statusCode) {
+  const timestamp = new Date().toISOString();
+  const log = {
+    timestamp,
+    event: 'auth_attempt',
+    success,
+    statusCode,
+    username: config.speedio.username // Nunca logar a senha!
+  };
+  
+  console.log(JSON.stringify(log));
+  
+  // Enviar para sistema de monitoramento
+  if (!success) {
+    // Alertar sobre falha de autenticação
+    console.error('⚠️ Falha de autenticação detectada');
+  }
+}
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+| Problema | Causa | Solução |
+|----------|--------|---------|
+| `401 Unauthorized` | Credenciais incorretas | Verifique username e password |
+| `403 Forbidden` | Conta sem permissão | Entre em contato com suporte |
+| `Variável não encontrada` | Variáveis não definidas | Configure as variáveis de ambiente |
+| `Base64 inválido` | Codificação incorreta | Use `echo -n` para evitar quebra de linha |
+
+### Debug de Autenticação
+
+```bash
+# Verificar se as variáveis estão definidas
+echo "Username: $SPEEDIO_USERNAME"
+echo "Password: [HIDDEN]"
+
+# Verificar codificação Base64
+echo -n "${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD}" | base64
+
+# Testar requisição com debug
+curl -v \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]'
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Primeira Requisição"
+    icon="rocket"
+    href="/inicio-rapido"
+  >
+    Configure suas credenciais e faça sua primeira chamada
+  </Card>
+  
+  <Card
+    title="Buscar por CNPJ"
+    icon="search"
+    href="/api/buscar-cnpj"
+  >
+    Aprenda a usar o endpoint principal da API
+  </Card>
+</CardGroup>

@@ -1,0 +1,762 @@
+---
+title: Buscar por CNPJ
+description: 'Busque informações detalhadas de empresas brasileiras usando CNPJ'
+---
+
+# Buscar Empresas por CNPJ
+
+O endpoint `/search_enriched_leads/cnpj` permite buscar informações completas e enriquecidas sobre empresas brasileiras usando seus CNPJs.
+
+## URL do Endpoint
+
+```
+GET https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj
+```
+
+## Parâmetros
+
+### Query Parameters
+
+<ParamField query="cnpjs" type="string" required>
+  Array JSON de CNPJs para buscar. Deve ser uma string JSON válida.
+  
+  **Formato**: `["21071712000171", "12345678000195"]`
+  
+  **Limite**: Até 10 CNPJs por requisição
+</ParamField>
+
+## Headers Obrigatórios
+
+<ParamField header="Authorization" type="string" required>
+  Basic Authentication com suas credenciais codificadas em Base64.
+  
+  **Formato**: `Basic base64(username:password)`
+</ParamField>
+
+<ParamField header="Content-Type" type="string">
+  Tipo de conteúdo da requisição.
+  
+  **Valor**: `application/json`
+</ParamField>
+
+## Exemplos de Requisição
+
+<CodeGroup>
+
+```bash cURL
+# Configure as variáveis de ambiente primeiro
+export SPEEDIO_USERNAME="testuser"
+export SPEEDIO_PASSWORD="spdtestuser"
+
+# Buscar uma empresa
+curl -G \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  -H "Content-Type: application/json" \
+  --data-urlencode 'cnpjs=["21071712000171"]' \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj'
+
+# Buscar múltiplas empresas
+curl -G \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  -H "Content-Type: application/json" \
+  --data-urlencode 'cnpjs=["21071712000171", "12345678000195"]' \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj'
+```
+
+```javascript Node.js
+const axios = require('axios');
+
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+async function buscarCNPJs(cnpjs) {
+  try {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: {
+          cnpjs: JSON.stringify(cnpjs)
+        },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erro na API:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Buscar uma empresa
+buscarCNPJs(['21071712000171'])
+  .then(data => console.log('Resultado:', JSON.stringify(data, null, 2)))
+  .catch(error => console.error('Erro:', error.message));
+
+// Buscar múltiplas empresas
+buscarCNPJs(['21071712000171', '12345678000195'])
+  .then(data => console.log('Resultados:', JSON.stringify(data, null, 2)))
+  .catch(error => console.error('Erro:', error.message));
+```
+
+```python Python
+import requests
+import json
+import base64
+import os
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+def buscar_cnpjs(cnpjs):
+    """Busca informações de empresas por CNPJ"""
+    url = "https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj"
+    
+    params = {
+        'cnpjs': json.dumps(cnpjs)
+    }
+    
+    headers = {
+        'Authorization': f'Basic {auth}',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Erro na API: {e}")
+        raise
+
+# Buscar uma empresa
+try:
+    resultado = buscar_cnpjs(['21071712000171'])
+    print("Resultado:", json.dumps(resultado, indent=2, ensure_ascii=False))
+except Exception as e:
+    print(f"Erro: {e}")
+
+# Buscar múltiplas empresas
+try:
+    resultados = buscar_cnpjs(['21071712000171', '12345678000195'])
+    print("Resultados:", json.dumps(resultados, indent=2, ensure_ascii=False))
+except Exception as e:
+    print(f"Erro: {e}")
+```
+
+```php PHP
+<?php
+$username = $_ENV['SPEEDIO_USERNAME'];
+$password = $_ENV['SPEEDIO_PASSWORD'];
+$auth = base64_encode($username . ':' . $password);
+
+function buscarCNPJs($cnpjs) {
+    global $auth;
+    
+    $url = 'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj';
+    $params = http_build_query([
+        'cnpjs' => json_encode($cnpjs)
+    ]);
+    
+    $curl = curl_init();
+    
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url . '?' . $params,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode !== 200) {
+        throw new Exception("Erro na API: HTTP $httpCode");
+    }
+    
+    return json_decode($response, true);
+}
+
+// Buscar uma empresa
+try {
+    $resultado = buscarCNPJs(['21071712000171']);
+    echo "Resultado:\n";
+    echo json_encode($resultado, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+} catch (Exception $e) {
+    echo "Erro: " . $e->getMessage();
+}
+
+// Buscar múltiplas empresas
+try {
+    $resultados = buscarCNPJs(['21071712000171', '12345678000195']);
+    echo "Resultados:\n";
+    echo json_encode($resultados, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+} catch (Exception $e) {
+    echo "Erro: " . $e->getMessage();
+}
+?>
+```
+
+</CodeGroup>
+
+## Resposta da API
+
+### Resposta de Sucesso (200)
+
+A API retorna um array de objetos com as informações das empresas encontradas:
+
+```json
+[
+  {
+    "cnpj": "21071712000171",
+    "razao_social": "SPEED IO - SERVICOS ESPECIALIZADOS LTDA",
+    "nome_fantasia": "SPEEDIO",
+    "location": {
+      "uf": "ES",
+      "city": "Colatina",
+      "bairro": "CENTRO",
+      "cep": "29700010",
+      "tipo_logradouro": "AVENIDA",
+      "nome_rua": "GETULIO VARGAS",
+      "numero": "196"
+    },
+    "website": "https://speedio.com.br/",
+    "faixa_faturamento_cnpj": "10M a 30M",
+    "faixa_faturamento_empresa": "10M a 30M",
+    "qnt_funcionario_cnpj": "51 a 100",
+    "qnt_funcionario_empresa": "51 a 100",
+    "telefones": {
+      "telefones_validados": [],
+      "telefones_contador": [],
+      "telefones_invalidos": ["11994154146, 1132803375, 11949141380, 1131631068"]
+    },
+    "generic_emails": {
+      "emails_validados": [],
+      "emails_contador": [],
+      "emails_invalidos": ["diogo@speedio.com.br", "atendimento@speedio.com.br"]
+    },
+    "qsa": [
+      {
+        "name": "EDUARDO BRENNAND CAMPOS",
+        "position": "Sócio"
+      },
+      {
+        "name": "DIOGO NASCIMENTO PUBLIO PEREIRA",
+        "position": "Sócio-Administrador"
+      }
+    ],
+    "administrador": "EDUARDO BRENNAND CAMPOS",
+    "data_abertura": "19/09/2014",
+    "idade_empresa": "10 anos",
+    "qnt_filiais": 0,
+    "natureza_juridica": "2062",
+    "cnae_primario": {
+      "cnae": "6203100",
+      "cnae_desc": "Desenvolvimento e licenciamento de programas de computador não-customizáveis"
+    },
+    "cnae_secundario": [
+      {
+        "cnae": "6491300",
+        "cnae_desc": "Sociedades de fomento mercantil - factoring"
+      }
+    ]
+  }
+]
+```
+
+### Estrutura da Resposta
+
+<ResponseField name="cnpj" type="string">
+  CNPJ da empresa (apenas números)
+</ResponseField>
+
+<ResponseField name="razao_social" type="string">
+  Razão social oficial da empresa
+</ResponseField>
+
+<ResponseField name="nome_fantasia" type="string">
+  Nome fantasia da empresa
+</ResponseField>
+
+<ResponseField name="location" type="object">
+  Informações de localização da empresa
+  
+  <Expandable title="Propriedades">
+    <ResponseField name="uf" type="string">Estado</ResponseField>
+    <ResponseField name="city" type="string">Cidade</ResponseField>
+    <ResponseField name="bairro" type="string">Bairro</ResponseField>
+    <ResponseField name="cep" type="string">CEP</ResponseField>
+    <ResponseField name="tipo_logradouro" type="string">Tipo do logradouro</ResponseField>
+    <ResponseField name="nome_rua" type="string">Nome da rua</ResponseField>
+    <ResponseField name="numero" type="string">Número</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="website" type="string">
+  Website da empresa
+</ResponseField>
+
+<ResponseField name="faixa_faturamento_cnpj" type="string">
+  Faixa de faturamento estimada do CNPJ
+</ResponseField>
+
+<ResponseField name="faixa_faturamento_empresa" type="string">
+  Faixa de faturamento estimada da empresa
+</ResponseField>
+
+<ResponseField name="qnt_funcionario_cnpj" type="string">
+  Quantidade estimada de funcionários do CNPJ
+</ResponseField>
+
+<ResponseField name="qnt_funcionario_empresa" type="string">
+  Quantidade estimada de funcionários da empresa
+</ResponseField>
+
+<ResponseField name="telefones" type="object">
+  Informações de telefones da empresa
+  
+  <Expandable title="Propriedades">
+    <ResponseField name="telefones_validados" type="array">Telefones validados</ResponseField>
+    <ResponseField name="telefones_contador" type="array">Contadores de telefones</ResponseField>
+    <ResponseField name="telefones_invalidos" type="array">Telefones inválidos</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generic_emails" type="object">
+  Informações de e-mails da empresa
+  
+  <Expandable title="Propriedades">
+    <ResponseField name="emails_validados" type="array">E-mails validados</ResponseField>
+    <ResponseField name="emails_contador" type="array">Contadores de e-mails</ResponseField>
+    <ResponseField name="emails_invalidos" type="array">E-mails inválidos</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="qsa" type="array">
+  Quadro de Sócios e Administradores
+  
+  <Expandable title="Item">
+    <ResponseField name="name" type="string">Nome do sócio</ResponseField>
+    <ResponseField name="position" type="string">Cargo/posição</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="administrador" type="string">
+  Nome do administrador principal
+</ResponseField>
+
+<ResponseField name="data_abertura" type="string">
+  Data de abertura da empresa (formato DD/MM/AAAA)
+</ResponseField>
+
+<ResponseField name="idade_empresa" type="string">
+  Idade da empresa em texto
+</ResponseField>
+
+<ResponseField name="qnt_filiais" type="number">
+  Quantidade de filiais
+</ResponseField>
+
+<ResponseField name="natureza_juridica" type="string">
+  Código da natureza jurídica
+</ResponseField>
+
+<ResponseField name="cnae_primario" type="object">
+  CNAE primário da empresa
+  
+  <Expandable title="Propriedades">
+    <ResponseField name="cnae" type="string">Código CNAE</ResponseField>
+    <ResponseField name="cnae_desc" type="string">Descrição da atividade</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="cnae_secundario" type="array">
+  CNAEs secundários da empresa
+  
+  <Expandable title="Item">
+    <ResponseField name="cnae" type="string">Código CNAE</ResponseField>
+    <ResponseField name="cnae_desc" type="string">Descrição da atividade</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Códigos de Status
+
+<ResponseField name="200" type="success">
+  **OK** - Requisição bem-sucedida. Retorna array com empresas encontradas.
+</ResponseField>
+
+<ResponseField name="400" type="error">
+  **Bad Request** - Parâmetros inválidos ou malformados.
+  ```json
+  {
+    "error": "Invalid CNPJ format",
+    "message": "CNPJs deve ser um array JSON válido"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  **Unauthorized** - Credenciais de autenticação inválidas.
+  ```json
+  {
+    "error": "Unauthorized",
+    "message": "Invalid credentials"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="403" type="error">
+  **Forbidden** - Acesso negado. Conta sem permissão para este endpoint.
+  ```json
+  {
+    "error": "Forbidden",
+    "message": "Access denied to this resource"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="429" type="error">
+  **Too Many Requests** - Limite de requisições excedido.
+  ```json
+  {
+    "error": "Rate limit exceeded",
+    "message": "Too many requests. Try again later.",
+    "retry_after": 60
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="500" type="error">
+  **Internal Server Error** - Erro interno do servidor.
+  ```json
+  {
+    "error": "Internal server error",
+    "message": "An unexpected error occurred"
+  }
+  ```
+</ResponseField>
+
+## Tratamento de Erros
+
+### Validação de CNPJ
+
+Antes de fazer a requisição, valide os CNPJs:
+
+<CodeGroup>
+
+```javascript JavaScript
+function validarCNPJ(cnpj) {
+  // Remove caracteres não numéricos
+  cnpj = cnpj.replace(/\D/g, '');
+  
+  // Verifica se tem 14 dígitos
+  if (cnpj.length !== 14) return false;
+  
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(cnpj)) return false;
+  
+  // Validação dos dígitos verificadores
+  let soma = 0;
+  let peso = 2;
+  
+  for (let i = 11; i >= 0; i--) {
+    soma += parseInt(cnpj[i]) * peso;
+    peso = peso === 9 ? 2 : peso + 1;
+  }
+  
+  let digito1 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+  
+  if (parseInt(cnpj[12]) !== digito1) return false;
+  
+  soma = 0;
+  peso = 2;
+  
+  for (let i = 12; i >= 0; i--) {
+    soma += parseInt(cnpj[i]) * peso;
+    peso = peso === 9 ? 2 : peso + 1;
+  }
+  
+  let digito2 = soma % 11 < 2 ? 0 : 11 - (soma % 11);
+  
+  return parseInt(cnpj[13]) === digito2;
+}
+
+// Usar antes da requisição
+const cnpjs = ['21071712000171', '12345678000195'];
+const cnpjsValidos = cnpjs.filter(validarCNPJ);
+
+if (cnpjsValidos.length !== cnpjs.length) {
+  console.error('Alguns CNPJs são inválidos');
+}
+```
+
+```python Python
+def validar_cnpj(cnpj):
+    """Valida CNPJ brasileiro"""
+    import re
+    
+    # Remove caracteres não numéricos
+    cnpj = re.sub(r'\D', '', cnpj)
+    
+    # Verifica se tem 14 dígitos
+    if len(cnpj) != 14:
+        return False
+    
+    # Verifica se todos os dígitos são iguais
+    if cnpj == cnpj[0] * 14:
+        return False
+    
+    # Validação dos dígitos verificadores
+    def calcular_digito(cnpj_base, pesos):
+        soma = sum(int(d) * p for d, p in zip(cnpj_base, pesos))
+        resto = soma % 11
+        return 0 if resto < 2 else 11 - resto
+    
+    pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    
+    digito1 = calcular_digito(cnpj[:12], pesos1)
+    digito2 = calcular_digito(cnpj[:13], pesos2)
+    
+    return cnpj[-2:] == f"{digito1}{digito2}"
+
+# Usar antes da requisição
+cnpjs = ['21071712000171', '12345678000195']
+cnpjs_validos = [cnpj for cnpj in cnpjs if validar_cnpj(cnpj)]
+
+if len(cnpjs_validos) != len(cnpjs):
+    print('Alguns CNPJs são inválidos')
+```
+
+</CodeGroup>
+
+### Retry Logic
+
+Implemente retry para lidar com erros temporários:
+
+<CodeGroup>
+
+```javascript JavaScript
+async function buscarCNPJsComRetry(cnpjs, maxTentativas = 3) {
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      return await buscarCNPJs(cnpjs);
+    } catch (error) {
+      if (error.response?.status === 429) {
+        // Rate limit - aguardar antes de tentar novamente
+        const retryAfter = error.response.headers['retry-after'] || 60;
+        console.log(`Rate limit atingido. Aguardando ${retryAfter}s...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+      } else if (error.response?.status >= 500 && tentativa < maxTentativas) {
+        // Erro do servidor - tentar novamente
+        console.log(`Erro do servidor. Tentativa ${tentativa}/${maxTentativas}`);
+        await new Promise(resolve => setTimeout(resolve, 2000 * tentativa));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Máximo de tentativas excedido');
+}
+```
+
+```python Python
+import time
+import requests
+
+def buscar_cnpjs_com_retry(cnpjs, max_tentativas=3):
+    for tentativa in range(1, max_tentativas + 1):
+        try:
+            return buscar_cnpjs(cnpjs)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429:
+                # Rate limit - aguardar antes de tentar novamente
+                retry_after = int(e.response.headers.get('retry-after', 60))
+                print(f"Rate limit atingido. Aguardando {retry_after}s...")
+                time.sleep(retry_after)
+            elif e.response.status_code >= 500 and tentativa < max_tentativas:
+                # Erro do servidor - tentar novamente
+                print(f"Erro do servidor. Tentativa {tentativa}/{max_tentativas}")
+                time.sleep(2 * tentativa)
+            else:
+                raise
+        except Exception as e:
+            if tentativa == max_tentativas:
+                raise
+            time.sleep(2 * tentativa)
+    
+    raise Exception('Máximo de tentativas excedido')
+```
+
+</CodeGroup>
+
+## Limites e Considerações
+
+### Rate Limits
+
+- **100 requisições por minuto** por conta
+- **1000 requisições por hora** por conta
+- **10 CNPJs máximo** por requisição
+
+### Performance
+
+- **Tempo de resposta médio**: 200-500ms por requisição
+- **Recomendação**: Faça requisições em lote quando possível
+- **Cache**: Os dados são atualizados diariamente
+
+### Custos
+
+- **1 crédito** por CNPJ consultado
+- CNPJs não encontrados **não consomem créditos**
+- Consulte seu saldo através do dashboard
+
+## Casos de Uso
+
+### 1. Enriquecimento de Base de Leads
+
+```javascript
+// Enriquecer lista de CNPJs existente
+const minhosLeads = [
+  '21071712000171',
+  '12345678000195',
+  '98765432000110'
+];
+
+async function enriquecerLeads(cnpjs) {
+  const chunks = [];
+  for (let i = 0; i < cnpjs.length; i += 10) {
+    chunks.push(cnpjs.slice(i, i + 10));
+  }
+  
+  const resultados = [];
+  for (const chunk of chunks) {
+    try {
+      const dados = await buscarCNPJs(chunk);
+      resultados.push(...dados);
+      
+      // Aguardar entre requisições para evitar rate limit
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error('Erro ao processar chunk:', error.message);
+    }
+  }
+  
+  return resultados;
+}
+```
+
+### 2. Validação de Prospects
+
+```javascript
+async function validarProspect(cnpj) {
+  try {
+    const [empresa] = await buscarCNPJs([cnpj]);
+    
+    if (!empresa) {
+      return { valido: false, motivo: 'Empresa não encontrada' };
+    }
+    
+    // Critérios de qualificação
+    const criterios = {
+      temWebsite: !!empresa.website,
+      temFuncionarios: empresa.qnt_funcionario_empresa !== "1 a 10",
+      temFaturamento: empresa.faixa_faturamento_empresa !== "Até 100K",
+      ativa: empresa.idade_empresa !== "0 anos"
+    };
+    
+    const pontuacao = Object.values(criterios).filter(Boolean).length;
+    
+    return {
+      valido: pontuacao >= 2,
+      pontuacao,
+      criterios,
+      empresa
+    };
+  } catch (error) {
+    return { valido: false, motivo: error.message };
+  }
+}
+```
+
+### 3. Pesquisa de Mercado
+
+```javascript
+async function analisarConcorrentes(cnpjsSegmento) {
+  const empresas = await buscarCNPJs(cnpjsSegmento);
+  
+  const analise = {
+    total: empresas.length,
+    porEstado: {},
+    porFaixaFaturamento: {},
+    porTamanho: {},
+    websites: empresas.filter(e => e.website).length
+  };
+  
+  empresas.forEach(empresa => {
+    // Análise por estado
+    const estado = empresa.location?.uf;
+    if (estado) {
+      analise.porEstado[estado] = (analise.porEstado[estado] || 0) + 1;
+    }
+    
+    // Análise por faturamento
+    const faturamento = empresa.faixa_faturamento_empresa;
+    if (faturamento) {
+      analise.porFaixaFaturamento[faturamento] = 
+        (analise.porFaixaFaturamento[faturamento] || 0) + 1;
+    }
+    
+    // Análise por tamanho
+    const tamanho = empresa.qnt_funcionario_empresa;
+    if (tamanho) {
+      analise.porTamanho[tamanho] = (analise.porTamanho[tamanho] || 0) + 1;
+    }
+  });
+  
+  return analise;
+}
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar Leads"
+    icon="users"
+    href="/api/buscar-leads"
+  >
+    Descubra como buscar leads com filtros avançados
+  </Card>
+  
+  <Card
+    title="Validação de Dados"
+    icon="check-circle"
+    href="/api/validacao"
+  >
+    Valide e-mails, telefones e CNPJs
+  </Card>
+  
+  <Card
+    title="Tratamento de Erros"
+    icon="exclamation-triangle"
+    href="/guias/tratamento-erros"
+  >
+    Implemente tratamento robusto de erros
+  </Card>
+  
+  <Card
+    title="Melhores Práticas"
+    icon="star"
+    href="/guias/melhores-praticas"
+  >
+    Otimize o uso da API
+  </Card>
+</CardGroup>

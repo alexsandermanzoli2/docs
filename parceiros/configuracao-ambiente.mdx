@@ -1,0 +1,534 @@
+---
+title: 'Configuração de Ambiente'
+description: 'Como configurar corretamente as variáveis de ambiente para a API Speedio'
+---
+
+## Visão Geral
+
+<Warning>
+  **Segurança Crítica**: Nunca inclua credenciais diretamente no código. Esta seção ensina como configurar variáveis de ambiente de forma segura.
+</Warning>
+
+A API de Parceiros da Speedio utiliza Basic Authentication com credenciais fornecidas exclusivamente para parceiros autorizados. Para manter a segurança, todas as credenciais devem ser armazenadas como variáveis de ambiente.
+
+## Variáveis Obrigatórias
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `SPEEDIO_USERNAME` | Nome de usuário fornecido pela Speedio | `seu_usuario_parceiro` |
+| `SPEEDIO_PASSWORD` | Senha fornecida pela Speedio | `sua_senha_segura` |
+
+## Configuração por Ambiente
+
+### 1. Desenvolvimento Local
+
+#### Arquivo .env (Recomendado)
+
+Crie um arquivo `.env` na raiz do seu projeto:
+
+```bash
+# .env
+SPEEDIO_USERNAME=seu_usuario_parceiro
+SPEEDIO_PASSWORD=sua_senha_segura
+```
+
+<Warning>
+  **Importante**: Sempre adicione `.env` ao seu `.gitignore` para evitar commit acidental das credenciais.
+</Warning>
+
+```bash
+# .gitignore
+.env
+*.env
+.env.local
+.env.production
+```
+
+#### Por Sistema Operacional
+
+**Linux/macOS (bash/zsh):**
+```bash
+export SPEEDIO_USERNAME="seu_usuario_parceiro"
+export SPEEDIO_PASSWORD="sua_senha_segura"
+
+# Para tornar permanente, adicione ao ~/.bashrc ou ~/.zshrc
+echo 'export SPEEDIO_USERNAME="seu_usuario_parceiro"' >> ~/.bashrc
+echo 'export SPEEDIO_PASSWORD="sua_senha_segura"' >> ~/.bashrc
+```
+
+**Windows PowerShell:**
+```powershell
+$env:SPEEDIO_USERNAME="seu_usuario_parceiro"
+$env:SPEEDIO_PASSWORD="sua_senha_segura"
+
+# Para tornar permanente
+[System.Environment]::SetEnvironmentVariable("SPEEDIO_USERNAME", "seu_usuario_parceiro", [System.EnvironmentVariableTarget]::User)
+[System.Environment]::SetEnvironmentVariable("SPEEDIO_PASSWORD", "sua_senha_segura", [System.EnvironmentVariableTarget]::User)
+```
+
+**Windows CMD:**
+```cmd
+set SPEEDIO_USERNAME=seu_usuario_parceiro
+set SPEEDIO_PASSWORD=sua_senha_segura
+
+# Para tornar permanente
+setx SPEEDIO_USERNAME "seu_usuario_parceiro"
+setx SPEEDIO_PASSWORD "sua_senha_segura"
+```
+
+### 2. Configuração em Produção
+
+#### Docker
+
+**Dockerfile:**
+```dockerfile
+FROM node:18
+WORKDIR /app
+COPY . .
+RUN npm install
+
+# Não inclua credenciais no Dockerfile!
+# Use --env ou --env-file na execução
+CMD ["npm", "start"]
+```
+
+**Execução com variáveis:**
+```bash
+docker run \
+  -e SPEEDIO_USERNAME=seu_usuario \
+  -e SPEEDIO_PASSWORD=sua_senha \
+  sua_aplicacao
+```
+
+**Usando arquivo de ambiente:**
+```bash
+# docker.env
+SPEEDIO_USERNAME=seu_usuario_parceiro
+SPEEDIO_PASSWORD=sua_senha_segura
+
+# Execução
+docker run --env-file docker.env sua_aplicacao
+```
+
+#### Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  app:
+    build: .
+    environment:
+      - SPEEDIO_USERNAME=${SPEEDIO_USERNAME}
+      - SPEEDIO_PASSWORD=${SPEEDIO_PASSWORD}
+    # Ou usar env_file:
+    # env_file:
+    #   - .env
+```
+
+#### Kubernetes
+
+**Usando Secrets:**
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: speedio-credentials
+type: Opaque
+data:
+  username: <base64_encoded_username>
+  password: <base64_encoded_password>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: sua_aplicacao
+        env:
+        - name: SPEEDIO_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: speedio-credentials
+              key: username
+        - name: SPEEDIO_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: speedio-credentials
+              key: password
+```
+
+**Criando o Secret:**
+```bash
+kubectl create secret generic speedio-credentials \
+  --from-literal=username=seu_usuario \
+  --from-literal=password=sua_senha
+```
+
+#### Provedores de Nuvem
+
+**AWS (EC2/ECS):**
+```bash
+# Usando AWS Systems Manager Parameter Store
+aws ssm put-parameter \
+  --name "/app/speedio/username" \
+  --value "seu_usuario" \
+  --type "SecureString"
+
+aws ssm put-parameter \
+  --name "/app/speedio/password" \
+  --value "sua_senha" \
+  --type "SecureString"
+```
+
+**Google Cloud Platform:**
+```bash
+# Usando Secret Manager
+gcloud secrets create speedio-username --data-file=<(echo -n "seu_usuario")
+gcloud secrets create speedio-password --data-file=<(echo -n "sua_senha")
+```
+
+**Azure:**
+```bash
+# Usando Key Vault
+az keyvault secret set \
+  --vault-name "seu-keyvault" \
+  --name "speedio-username" \
+  --value "seu_usuario"
+
+az keyvault secret set \
+  --vault-name "seu-keyvault" \
+  --name "speedio-password" \
+  --value "sua_senha"
+```
+
+**Heroku:**
+```bash
+heroku config:set SPEEDIO_USERNAME=seu_usuario
+heroku config:set SPEEDIO_PASSWORD=sua_senha
+```
+
+**Vercel:**
+```bash
+vercel env add SPEEDIO_USERNAME
+vercel env add SPEEDIO_PASSWORD
+```
+
+**Netlify:**
+```bash
+# Via UI ou CLI
+netlify env:set SPEEDIO_USERNAME seu_usuario
+netlify env:set SPEEDIO_PASSWORD sua_senha
+```
+
+## Uso nas Linguagens
+
+### Node.js
+
+**Carregando variáveis com dotenv:**
+```javascript
+// Instalar: npm install dotenv
+require('dotenv').config();
+
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+
+if (!username || !password) {
+  throw new Error('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias');
+}
+
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+```
+
+**Verificação completa:**
+```javascript
+function validateEnvironment() {
+  const required = ['SPEEDIO_USERNAME', 'SPEEDIO_PASSWORD'];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Variáveis obrigatórias não definidas: ${missing.join(', ')}`);
+  }
+  
+  return {
+    username: process.env.SPEEDIO_USERNAME,
+    password: process.env.SPEEDIO_PASSWORD
+  };
+}
+
+const credentials = validateEnvironment();
+```
+
+### Python
+
+**Usando python-dotenv:**
+```python
+# Instalar: pip install python-dotenv
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+
+if not username or not password:
+    raise ValueError('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias')
+```
+
+**Classe para gerenciar configurações:**
+```python
+import os
+from typing import Optional
+
+class Config:
+    def __init__(self):
+        self.username = self._get_required('SPEEDIO_USERNAME')
+        self.password = self._get_required('SPEEDIO_PASSWORD')
+    
+    def _get_required(self, key: str) -> str:
+        value = os.getenv(key)
+        if not value:
+            raise ValueError(f'Variável de ambiente {key} é obrigatória')
+        return value
+    
+    def _get_optional(self, key: str, default: str = None) -> Optional[str]:
+        return os.getenv(key, default)
+
+config = Config()
+```
+
+### PHP
+
+**Carregando variáveis:**
+```php
+<?php
+// Usando vlucas/phpdotenv: composer install vlucas/phpdotenv
+require_once 'vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$username = $_ENV['SPEEDIO_USERNAME'] ?? getenv('SPEEDIO_USERNAME');
+$password = $_ENV['SPEEDIO_PASSWORD'] ?? getenv('SPEEDIO_PASSWORD');
+
+if (!$username || !$password) {
+    throw new Exception('SPEEDIO_USERNAME e SPEEDIO_PASSWORD são obrigatórias');
+}
+?>
+```
+
+**Classe de configuração:**
+```php
+<?php
+class SpeedioConfig {
+    private $username;
+    private $password;
+    
+    public function __construct() {
+        $this->username = $this->getRequired('SPEEDIO_USERNAME');
+        $this->password = $this->getRequired('SPEEDIO_PASSWORD');
+    }
+    
+    private function getRequired(string $key): string {
+        $value = $_ENV[$key] ?? getenv($key);
+        if (!$value) {
+            throw new Exception("Variável de ambiente {$key} é obrigatória");
+        }
+        return $value;
+    }
+    
+    public function getUsername(): string {
+        return $this->username;
+    }
+    
+    public function getPassword(): string {
+        return $this->password;
+    }
+    
+    public function getBasicAuth(): string {
+        return base64_encode($this->username . ':' . $this->password);
+    }
+}
+
+$config = new SpeedioConfig();
+?>
+```
+
+## Verificação da Configuração
+
+### Script de Teste (Node.js)
+
+```javascript
+#!/usr/bin/env node
+require('dotenv').config();
+
+function testCredentials() {
+  console.log('🔍 Verificando configuração da API Speedio...\n');
+  
+  const username = process.env.SPEEDIO_USERNAME;
+  const password = process.env.SPEEDIO_PASSWORD;
+  
+  // Verificar se as variáveis existem
+  if (!username) {
+    console.error('❌ SPEEDIO_USERNAME não está definida');
+    return false;
+  }
+  
+  if (!password) {
+    console.error('❌ SPEEDIO_PASSWORD não está definida');
+    return false;
+  }
+  
+  console.log('✅ SPEEDIO_USERNAME:', username.substring(0, 4) + '***');
+  console.log('✅ SPEEDIO_PASSWORD:', '***' + password.substring(password.length - 3));
+  
+  // Verificar formato básico
+  if (username.length < 3) {
+    console.error('❌ Username parece muito curto');
+    return false;
+  }
+  
+  if (password.length < 8) {
+    console.error('❌ Password parece muito curta');
+    return false;
+  }
+  
+  const auth = Buffer.from(`${username}:${password}`).toString('base64');
+  console.log('✅ Basic Auth gerado:', auth.substring(0, 10) + '...');
+  
+  console.log('\n🎉 Configuração válida! Você pode usar a API.');
+  return true;
+}
+
+if (require.main === module) {
+  process.exit(testCredentials() ? 0 : 1);
+}
+
+module.exports = { testCredentials };
+```
+
+### Script de Teste (Python)
+
+```python
+#!/usr/bin/env python3
+import os
+import base64
+import sys
+
+def test_credentials():
+    print("🔍 Verificando configuração da API Speedio...\n")
+    
+    username = os.getenv('SPEEDIO_USERNAME')
+    password = os.getenv('SPEEDIO_PASSWORD')
+    
+    # Verificar se as variáveis existem
+    if not username:
+        print("❌ SPEEDIO_USERNAME não está definida")
+        return False
+    
+    if not password:
+        print("❌ SPEEDIO_PASSWORD não está definida")
+        return False
+    
+    print(f"✅ SPEEDIO_USERNAME: {username[:4]}***")
+    print(f"✅ SPEEDIO_PASSWORD: ***{password[-3:]}")
+    
+    # Verificar formato básico
+    if len(username) < 3:
+        print("❌ Username parece muito curto")
+        return False
+    
+    if len(password) < 8:
+        print("❌ Password parece muito curta")
+        return False
+    
+    auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+    print(f"✅ Basic Auth gerado: {auth[:10]}...")
+    
+    print("\n🎉 Configuração válida! Você pode usar a API.")
+    return True
+
+if __name__ == "__main__":
+    sys.exit(0 if test_credentials() else 1)
+```
+
+## Troubleshooting
+
+### Problemas Comuns
+
+<AccordionGroup>
+  <Accordion title="Variáveis não carregam">
+    **Sintomas**: `undefined` ou `None` ao acessar as variáveis
+    
+    **Soluções**:
+    - Verifique se o arquivo `.env` está na raiz do projeto
+    - Confirme que não há espaços ao redor do `=` no arquivo `.env`
+    - Para Node.js, certifique-se de chamar `require('dotenv').config()` antes de usar as variáveis
+    - Para Python, use `load_dotenv()` antes de acessar `os.getenv()`
+  </Accordion>
+
+  <Accordion title="Erro de autenticação 401">
+    **Sintomas**: API retorna erro 401 Unauthorized
+    
+    **Soluções**:
+    - Verifique se as credenciais estão corretas
+    - Confirme que não há caracteres especiais não codificados
+    - Teste a codificação Base64 manualmente
+    - Entre em contato com o suporte para verificar o status da conta
+  </Accordion>
+
+  <Accordion title="Credenciais expostas no Git">
+    **Sintomas**: Credenciais commitadas acidentalmente
+    
+    **Soluções**:
+    1. Adicione `.env` ao `.gitignore` imediatamente
+    2. Remova as credenciais do histórico: `git filter-branch --index-filter 'git rm --cached --ignore-unmatch .env' HEAD`
+    3. **Importante**: Rotacione as credenciais imediatamente
+    4. Force push: `git push --force-with-lease origin main`
+  </Accordion>
+
+  <Accordion title="Diferentes ambientes">
+    **Sintomas**: Funciona local mas não em produção
+    
+    **Soluções**:
+    - Use diferentes arquivos para cada ambiente (`.env.local`, `.env.production`)
+    - Configure as variáveis no provedor de nuvem
+    - Verifique se o processo de deploy está copiando as variáveis
+    - Use scripts de verificação nos pipelines de CI/CD
+  </Accordion>
+</AccordionGroup>
+
+## Segurança Adicional
+
+### Rotação de Credenciais
+
+1. **Solicite novas credenciais** para o suporte
+2. **Configure as novas variáveis** em paralelo
+3. **Teste com as novas credenciais** em ambiente de staging
+4. **Atualize produção** durante uma janela de manutenção
+5. **Revogue as credenciais antigas** após confirmação
+
+### Monitoramento
+
+```javascript
+// Exemplo de logging seguro (sem expor credenciais)
+function logApiCall(response) {
+  console.log({
+    timestamp: new Date().toISOString(),
+    status: response.status,
+    url: response.url.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'), // Mascarar credenciais
+    duration: response.duration
+  });
+}
+```
+
+### Auditoria
+
+- **Registre o uso** das credenciais (sem expor os valores)
+- **Monitore tentativas** de acesso não autorizadas
+- **Configure alertas** para uso anormal da API
+- **Revise periodicamente** quem tem acesso às credenciais

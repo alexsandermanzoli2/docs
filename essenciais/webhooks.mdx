@@ -1,0 +1,337 @@
+---
+title: 'Webhooks'
+description: 'Receive real-time notifications for events in your Speedio account'
+---
+
+## Overview
+
+Webhooks allow you to receive real-time HTTP notifications when events occur in your Speedio account. Instead of polling our API, you can subscribe to events and we'll send you updates as they happen.
+
+## Setting Up Webhooks
+
+### 1. Create a Webhook Endpoint
+
+First, create an endpoint on your server to receive webhook events:
+
+<CodeGroup>
+
+```javascript Express.js
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+app.post('/webhooks/speedio', express.raw({ type: 'application/json' }), (req, res) => {
+  const signature = req.headers['x-speedio-signature'];
+  const timestamp = req.headers['x-speedio-timestamp'];
+  const body = req.body;
+  
+  // Verify the webhook (see below)
+  if (!verifyWebhook(body, signature, timestamp)) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  // Process the event
+  const event = JSON.parse(body);
+  
+  switch (event.type) {
+    case 'lead.created':
+      handleLeadCreated(event.data);
+      break;
+    case 'lead.updated':
+      handleLeadUpdated(event.data);
+      break;
+    // Add more event handlers
+  }
+  
+  // Return 200 OK to acknowledge receipt
+  res.status(200).send('OK');
+});
+```
+
+```python Flask
+from flask import Flask, request, abort
+import hmac
+import hashlib
+import json
+
+app = Flask(__name__)
+
+@app.route('/webhooks/speedio', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-Speedio-Signature')
+    timestamp = request.headers.get('X-Speedio-Timestamp')
+    body = request.data
+    
+    # Verify the webhook
+    if not verify_webhook(body, signature, timestamp):
+        abort(401)
+    
+    # Process the event
+    event = json.loads(body)
+    
+    if event['type'] == 'lead.created':
+        handle_lead_created(event['data'])
+    elif event['type'] == 'lead.updated':
+        handle_lead_updated(event['data'])
+    
+    return 'OK', 200
+```
+
+</CodeGroup>
+
+### 2. Register Your Endpoint
+
+Register your webhook endpoint in the Speedio Dashboard:
+
+1. Go to [Settings → Webhooks](https://app.speedio.com.br/settings/webhooks)
+2. Click "Add Endpoint"
+3. Enter your endpoint URL
+4. Select the events you want to receive
+5. Save your webhook
+
+### 3. Verify Webhook Signatures
+
+Always verify webhook signatures to ensure requests are from Speedio:
+
+<CodeGroup>
+
+```javascript JavaScript
+function verifyWebhook(body, signature, timestamp) {
+  const secret = process.env.SPEEDIO_WEBHOOK_SECRET;
+  
+  // Prevent replay attacks
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (currentTime - parseInt(timestamp) > 300) { // 5 minutes
+    return false;
+  }
+  
+  // Calculate expected signature
+  const payload = `${timestamp}.${body}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  // Compare signatures
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+```
+
+```python Python
+import hmac
+import hashlib
+import time
+
+def verify_webhook(body, signature, timestamp):
+    secret = os.environ.get('SPEEDIO_WEBHOOK_SECRET')
+    
+    # Prevent replay attacks
+    current_time = int(time.time())
+    if current_time - int(timestamp) > 300:  # 5 minutes
+        return False
+    
+    # Calculate expected signature
+    payload = f"{timestamp}.{body.decode('utf-8')}"
+    expected_signature = hmac.new(
+        secret.encode('utf-8'),
+        payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Compare signatures
+    return hmac.compare_digest(signature, expected_signature)
+```
+
+</CodeGroup>
+
+## Event Types
+
+### Lead Events
+
+| Event | Description |
+|-------|-------------|
+| `lead.created` | A new lead was created |
+| `lead.updated` | A lead was updated |
+| `lead.deleted` | A lead was deleted |
+| `lead.validated` | A lead's contact info was validated |
+| `lead.enriched` | A lead was enriched with additional data |
+
+### Campaign Events
+
+| Event | Description |
+|-------|-------------|
+| `campaign.started` | A campaign was started |
+| `campaign.completed` | A campaign completed |
+| `campaign.failed` | A campaign failed |
+
+### Account Events
+
+| Event | Description |
+|-------|-------------|
+| `account.credits.low` | Account credits are running low |
+| `account.limit.reached` | Account limit reached |
+
+## Event Payload
+
+All webhook events follow this structure:
+
+```json
+{
+  "id": "evt_1234567890",
+  "type": "lead.created",
+  "created_at": "2024-01-15T10:30:00Z",
+  "data": {
+    // Event-specific data
+  }
+}
+```
+
+### Example: Lead Created Event
+
+```json
+{
+  "id": "evt_abc123",
+  "type": "lead.created",
+  "created_at": "2024-01-15T10:30:00Z",
+  "data": {
+    "lead": {
+      "id": "lead_xyz789",
+      "email": "john.doe@company.com",
+      "name": "John Doe",
+      "company": "Company Inc",
+      "phone": "+55 11 98765-4321",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+## Webhook Security
+
+### IP Whitelisting
+
+Speedio webhooks are sent from these IP addresses:
+
+```
+54.231.123.45
+54.231.123.46
+54.231.123.47
+```
+
+Consider whitelisting these IPs in your firewall.
+
+### HTTPS Required
+
+Webhook endpoints must use HTTPS. HTTP endpoints will be rejected.
+
+### Retry Policy
+
+If your endpoint doesn't return a 2xx status code, we'll retry the webhook:
+
+- **Attempt 1**: Immediate
+- **Attempt 2**: 5 seconds
+- **Attempt 3**: 5 minutes
+- **Attempt 4**: 30 minutes
+- **Attempt 5**: 2 hours
+- **Attempt 6**: 5 hours
+- **Attempt 7**: 10 hours
+
+After 7 failed attempts, we'll mark the webhook as failed and stop retrying.
+
+## Testing Webhooks
+
+### Using the Dashboard
+
+Test webhooks directly from the dashboard:
+
+1. Go to your webhook settings
+2. Click on a webhook endpoint
+3. Click "Send Test Event"
+4. Select an event type
+5. Click "Send"
+
+### Using ngrok for Local Development
+
+Test webhooks locally using ngrok:
+
+```bash
+# Install ngrok
+npm install -g ngrok
+
+# Expose your local server
+ngrok http 3000
+
+# Use the HTTPS URL as your webhook endpoint
+# https://abc123.ngrok.io/webhooks/speedio
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Idempotency">
+    Handle duplicate events gracefully. Use the event ID to ensure you process each event only once.
+    
+    ```javascript
+    const processedEvents = new Set();
+    
+    function handleEvent(event) {
+      if (processedEvents.has(event.id)) {
+        return; // Already processed
+      }
+      
+      // Process event
+      processEvent(event);
+      
+      // Mark as processed
+      processedEvents.add(event.id);
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Async Processing">
+    Process webhooks asynchronously to return 200 OK quickly:
+    
+    ```javascript
+    app.post('/webhook', (req, res) => {
+      // Acknowledge receipt immediately
+      res.status(200).send('OK');
+      
+      // Process asynchronously
+      processWebhookAsync(req.body);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    Log webhook errors but always return 200 OK for valid signatures:
+    
+    ```javascript
+    try {
+      processWebhook(event);
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      // Still return 200 to prevent retries
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Monitoring
+
+Monitor your webhook health in the dashboard:
+
+- Delivery success rate
+- Average response time
+- Failed attempts
+- Event history
+
+<Card
+  title="View Webhook Logs"
+  icon="chart-line"
+  href="https://app.speedio.com.br/settings/webhooks/logs"
+>
+  Monitor your webhook performance
+</Card>

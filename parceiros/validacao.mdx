@@ -1,0 +1,886 @@
+---
+title: 'Validação de Dados'
+api: 'POST /validate'
+description: 'Valide e-mails, telefones e outros dados em tempo real'
+---
+
+## Visão Geral
+
+O endpoint de validação permite verificar a validade e entregabilidade de e-mails, telefones e outros tipos de dados sem fazer enriquecimento completo. É ideal para limpeza de bases de dados e validação em tempo real.
+
+## Requisição
+
+### URL
+```
+POST https://api-get-leads.speedio.com.br/validate
+```
+
+### Request Body
+
+<ParamField body="type" type="string" required>
+  Tipo de validação
+  
+  Opções: `"email"`, `"phone"`, `"cnpj"`, `"domain"`
+</ParamField>
+
+<ParamField body="data" type="array" required>
+  Array de dados para validar
+  
+  <Expandable title="Exemplos por Tipo">
+    **Para type="email":**
+    ```json
+    ["joao@empresa.com", "maria@gmail.com", "invalido@teste"]
+    ```
+    
+    **Para type="phone":**
+    ```json
+    ["+5511987654321", "11987654321", "+1234567890"]
+    ```
+    
+    **Para type="cnpj":**
+    ```json
+    ["12.345.678/0001-90", "12345678000190", "00000000000000"]
+    ```
+    
+    **Para type="domain":**
+    ```json
+    ["empresa.com.br", "google.com", "dominioinvalido.xyz"]
+    ```
+  </Expandable>
+</ParamField>
+
+<ParamField body="check_mx" type="boolean" default="true">
+  Verificar registros MX (apenas para e-mails)
+</ParamField>
+
+<ParamField body="check_smtp" type="boolean" default="false">
+  Verificar conectividade SMTP (apenas para e-mails)
+</ParamField>
+
+<ParamField body="check_disposable" type="boolean" default="true">
+  Verificar se é e-mail temporário/descartável
+</ParamField>
+
+<ParamField body="normalize" type="boolean" default="true">
+  Normalizar e formatar os dados de entrada
+</ParamField>
+
+## Resposta
+
+<ResponseField name="success" type="boolean">
+  Indica se a requisição foi bem-sucedida
+</ResponseField>
+
+<ResponseField name="validated" type="array">
+  Array contendo os resultados da validação
+  
+  <Expandable title="Objeto de Validação">
+    <ResponseField name="input" type="string">
+      Dado original enviado
+    </ResponseField>
+    
+    <ResponseField name="normalized" type="string">
+      Dado normalizado/formatado
+    </ResponseField>
+    
+    <ResponseField name="valid" type="boolean">
+      Se o dado é válido
+    </ResponseField>
+    
+    <ResponseField name="risk_level" type="string">
+      Nível de risco: `"low"`, `"medium"`, `"high"`
+    </ResponseField>
+    
+    <ResponseField name="details" type="object">
+      Detalhes específicos por tipo
+      
+      <Expandable title="Detalhes por Tipo">
+        **Para e-mails:**
+        ```json
+        {
+          "syntax_valid": true,
+          "domain_valid": true,
+          "mx_found": true,
+          "smtp_valid": true,
+          "disposable": false,
+          "role_account": false,
+          "free_provider": true,
+          "provider": "gmail.com",
+          "typo_suggestion": null
+        }
+        ```
+        
+        **Para telefones:**
+        ```json
+        {
+          "country_code": "+55",
+          "national_format": "(11) 98765-4321",
+          "international_format": "+55 11 98765-4321",
+          "type": "mobile",
+          "carrier": "Vivo",
+          "region": "São Paulo"
+        }
+        ```
+        
+        **Para CNPJ:**
+        ```json
+        {
+          "formatted": "12.345.678/0001-90",
+          "digits_valid": true,
+          "check_digits_valid": true,
+          "status": "ATIVA",
+          "company_type": "LTDA"
+        }
+        ```
+        
+        **Para domínios:**
+        ```json
+        {
+          "dns_valid": true,
+          "mx_records": ["mx1.google.com", "mx2.google.com"],
+          "a_records": ["142.250.191.110"],
+          "ssl_valid": true,
+          "domain_age": "25 years"
+        }
+        ```
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="confidence" type="number">
+      Nível de confiança na validação (0-1)
+    </ResponseField>
+    
+    <ResponseField name="processing_time" type="number">
+      Tempo de processamento em segundos
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="invalid" type="array">
+  Lista de dados que não puderam ser validados
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Metadados da operação
+  
+  <Expandable title="Metadata">
+    <ResponseField name="total_processed" type="integer">
+      Total de itens processados
+    </ResponseField>
+    
+    <ResponseField name="total_valid" type="integer">
+      Total de itens válidos
+    </ResponseField>
+    
+    <ResponseField name="total_invalid" type="integer">
+      Total de itens inválidos
+    </ResponseField>
+    
+    <ResponseField name="average_confidence" type="number">
+      Confiança média das validações
+    </ResponseField>
+    
+    <ResponseField name="processing_time" type="number">
+      Tempo total de processamento
+    </ResponseField>
+    
+    <ResponseField name="credits_used" type="integer">
+      Créditos consumidos
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL - Validar E-mails
+# Configure as variáveis de ambiente primeiro
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha"
+
+curl --location 'https://api-get-leads.speedio.com.br/validate' \
+  --header 'Content-Type: application/json' \
+  --header "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  --data '{
+    "type": "email",
+    "data": [
+      "joao.silva@empresa.com.br",
+      "maria@gmail.com",
+      "teste@temporario.com",
+      "invalido@dominio"
+    ],
+    "check_mx": true,
+    "check_smtp": false,
+    "check_disposable": true
+  }'
+```
+
+```bash cURL - Validar Telefones
+# Configure as variáveis de ambiente primeiro
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha"
+
+curl --location 'https://api-get-leads.speedio.com.br/validate' \
+  --header 'Content-Type: application/json' \
+  --header "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  --data '{
+    "type": "phone",
+    "data": [
+      "+5511987654321",
+      "11987654321",
+      "21976543210",
+      "+1234567890"
+    ],
+    "normalize": true
+  }'
+```
+
+```javascript Node.js
+const axios = require('axios');
+
+// Configure as variáveis de ambiente
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+
+if (!username || !password) {
+  throw new Error('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas');
+}
+
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+// Função para validar e-mails
+async function validateEmails(emails, options = {}) {
+  const data = {
+    type: 'email',
+    data: emails,
+    check_mx: true,
+    check_smtp: false,
+    check_disposable: true,
+    ...options
+  };
+
+  try {
+    const response = await axios.post(
+      'https://api-get-leads.speedio.com.br/validate',
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${auth}`
+        }
+      }
+    );
+
+    const result = response.data;
+    console.log(`${result.metadata.total_valid}/${result.metadata.total_processed} e-mails válidos`);
+    
+    // Separar válidos e inválidos
+    const valid = result.validated.filter(email => email.valid);
+    const invalid = result.validated.filter(email => !email.valid);
+    
+    return { valid, invalid, metadata: result.metadata };
+  } catch (error) {
+    console.error('Erro:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Função para validar telefones
+async function validatePhones(phones) {
+  const data = {
+    type: 'phone',
+    data: phones,
+    normalize: true
+  };
+
+  try {
+    const response = await axios.post(
+      'https://api-get-leads.speedio.com.br/validate',
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${auth}`
+        }
+      }
+    );
+
+    return response.data.validated.map(phone => ({
+      original: phone.input,
+      normalized: phone.normalized,
+      valid: phone.valid,
+      type: phone.details.type,
+      carrier: phone.details.carrier
+    }));
+  } catch (error) {
+    console.error('Erro:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Exemplo de uso
+const emails = [
+  'joao@empresa.com.br',
+  'maria@gmail.com',
+  'invalido@teste'
+];
+
+validateEmails(emails).then(result => {
+  console.log('E-mails válidos:', result.valid);
+  console.log('E-mails inválidos:', result.invalid);
+});
+```
+
+```python Python
+import requests
+import base64
+import json
+import os
+
+class SpeedioValidator:
+    def __init__(self):
+        # Configure as variáveis de ambiente
+        username = os.getenv('SPEEDIO_USERNAME')
+        password = os.getenv('SPEEDIO_PASSWORD')
+        
+        if not username or not password:
+            raise ValueError('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas')
+        
+        self.auth = base64.b64encode(f'{username}:{password}'.encode()).decode()
+        self.base_url = 'https://api-get-leads.speedio.com.br'
+        
+    def _make_request(self, data):
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Basic {self.auth}'
+        }
+        
+        response = requests.post(
+            f'{self.base_url}/validate',
+            json=data,
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f'Erro {response.status_code}: {response.text}')
+    
+    def validate_emails(self, emails, **options):
+        """Validar lista de e-mails"""
+        data = {
+            'type': 'email',
+            'data': emails,
+            'check_mx': True,
+            'check_smtp': False,
+            'check_disposable': True,
+            **options
+        }
+        
+        result = self._make_request(data)
+        
+        # Separar por categorias
+        valid = [email for email in result['validated'] if email['valid']]
+        risky = [email for email in result['validated'] if email['risk_level'] == 'high']
+        disposable = [email for email in result['validated'] if email['details'].get('disposable')]
+        
+        return {
+            'valid': valid,
+            'risky': risky,
+            'disposable': disposable,
+            'metadata': result['metadata']
+        }
+    
+    def validate_phones(self, phones):
+        """Validar lista de telefones"""
+        data = {
+            'type': 'phone',
+            'data': phones,
+            'normalize': True
+        }
+        
+        result = self._make_request(data)
+        
+        return {
+            'validated': result['validated'],
+            'mobile_phones': [p for p in result['validated'] if p['details'].get('type') == 'mobile'],
+            'landline_phones': [p for p in result['validated'] if p['details'].get('type') == 'landline'],
+            'metadata': result['metadata']
+        }
+    
+    def validate_cnpjs(self, cnpjs):
+        """Validar lista de CNPJs"""
+        data = {
+            'type': 'cnpj',
+            'data': cnpjs,
+            'normalize': True
+        }
+        
+        result = self._make_request(data)
+        
+        return {
+            'validated': result['validated'],
+            'active_companies': [c for c in result['validated'] if c['details'].get('status') == 'ATIVA'],
+            'metadata': result['metadata']
+        }
+
+# Exemplo de uso
+validator = SpeedioValidator()
+
+# Validar e-mails
+emails = ['joao@empresa.com', 'maria@gmail.com', 'teste@temporario.com']
+result = validator.validate_emails(emails)
+
+print(f"E-mails válidos: {len(result['valid'])}")
+print(f"E-mails de risco: {len(result['risky'])}")
+print(f"E-mails temporários: {len(result['disposable'])}")
+
+# Validar telefones
+phones = ['+5511987654321', '11976543210', '+5521987654321']
+result = validator.validate_phones(phones)
+
+print(f"Telefones móveis: {len(result['mobile_phones'])}")
+print(f"Telefones fixos: {len(result['landline_phones'])}")
+```
+
+```php PHP
+<?php
+class SpeedioValidator {
+    private $auth;
+    private $baseUrl = 'https://api-get-leads.speedio.com.br';
+    
+    public function __construct() {
+        // Configure as variáveis de ambiente
+        $username = $_ENV['SPEEDIO_USERNAME'] ?? getenv('SPEEDIO_USERNAME');
+        $password = $_ENV['SPEEDIO_PASSWORD'] ?? getenv('SPEEDIO_PASSWORD');
+        
+        if (!$username || !$password) {
+            throw new Exception('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas');
+        }
+        
+        $this->auth = base64_encode($username . ':' . $password);
+    }
+    
+    private function makeRequest($data) {
+        $curl = curl_init();
+        
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $this->baseUrl . '/validate',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Basic ' . $this->auth
+            ]
+        ]);
+        
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+        
+        if ($httpCode == 200) {
+            return json_decode($response, true);
+        } else {
+            throw new Exception("Erro HTTP $httpCode: $response");
+        }
+    }
+    
+    public function validateEmails($emails, $options = []) {
+        $data = array_merge([
+            'type' => 'email',
+            'data' => $emails,
+            'check_mx' => true,
+            'check_smtp' => false,
+            'check_disposable' => true
+        ], $options);
+        
+        $result = $this->makeRequest($data);
+        
+        $categories = [
+            'valid' => [],
+            'invalid' => [],
+            'risky' => [],
+            'disposable' => []
+        ];
+        
+        foreach ($result['validated'] as $email) {
+            if ($email['valid']) {
+                $categories['valid'][] = $email;
+            } else {
+                $categories['invalid'][] = $email;
+            }
+            
+            if ($email['risk_level'] === 'high') {
+                $categories['risky'][] = $email;
+            }
+            
+            if ($email['details']['disposable'] ?? false) {
+                $categories['disposable'][] = $email;
+            }
+        }
+        
+        return $categories;
+    }
+    
+    public function validatePhones($phones) {
+        $data = [
+            'type' => 'phone',
+            'data' => $phones,
+            'normalize' => true
+        ];
+        
+        $result = $this->makeRequest($data);
+        
+        $mobile = array_filter($result['validated'], function($phone) {
+            return ($phone['details']['type'] ?? '') === 'mobile';
+        });
+        
+        return [
+            'all' => $result['validated'],
+            'mobile' => array_values($mobile),
+            'metadata' => $result['metadata']
+        ];
+    }
+}
+
+// Exemplo de uso
+$validator = new SpeedioValidator();
+
+// Validar e-mails
+$emails = ['joao@empresa.com', 'maria@invalido', 'teste@temporario.com'];
+$result = $validator->validateEmails($emails);
+
+echo "E-mails válidos: " . count($result['valid']) . "\n";
+echo "E-mails inválidos: " . count($result['invalid']) . "\n";
+echo "E-mails temporários: " . count($result['disposable']) . "\n";
+
+// Validar telefones
+$phones = ['+5511987654321', '11976543210', 'telefone_invalido'];
+$result = $validator->validatePhones($phones);
+
+echo "Telefones móveis: " . count($result['mobile']) . "\n";
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Resposta - Validação de E-mails (200)
+{
+  "success": true,
+  "validated": [
+    {
+      "input": "joao.silva@empresa.com.br",
+      "normalized": "joao.silva@empresa.com.br",
+      "valid": true,
+      "risk_level": "low",
+      "details": {
+        "syntax_valid": true,
+        "domain_valid": true,
+        "mx_found": true,
+        "smtp_valid": true,
+        "disposable": false,
+        "role_account": false,
+        "free_provider": false,
+        "provider": "empresa.com.br",
+        "typo_suggestion": null
+      },
+      "confidence": 0.95,
+      "processing_time": 0.123
+    },
+    {
+      "input": "maria@gmail.com",
+      "normalized": "maria@gmail.com",
+      "valid": true,
+      "risk_level": "medium",
+      "details": {
+        "syntax_valid": true,
+        "domain_valid": true,
+        "mx_found": true,
+        "smtp_valid": true,
+        "disposable": false,
+        "role_account": false,
+        "free_provider": true,
+        "provider": "gmail.com",
+        "typo_suggestion": null
+      },
+      "confidence": 0.85,
+      "processing_time": 0.089
+    },
+    {
+      "input": "teste@temporario.com",
+      "normalized": "teste@temporario.com",
+      "valid": false,
+      "risk_level": "high",
+      "details": {
+        "syntax_valid": true,
+        "domain_valid": true,
+        "mx_found": false,
+        "smtp_valid": false,
+        "disposable": true,
+        "role_account": false,
+        "free_provider": true,
+        "provider": "temporario.com",
+        "typo_suggestion": null
+      },
+      "confidence": 0.98,
+      "processing_time": 0.067
+    }
+  ],
+  "invalid": [
+    "invalido@dominio"
+  ],
+  "metadata": {
+    "total_processed": 4,
+    "total_valid": 2,
+    "total_invalid": 2,
+    "average_confidence": 0.89,
+    "processing_time": 0.279,
+    "credits_used": 4
+  }
+}
+```
+
+```json Resposta - Validação de Telefones (200)
+{
+  "success": true,
+  "validated": [
+    {
+      "input": "+5511987654321",
+      "normalized": "+55 11 98765-4321",
+      "valid": true,
+      "risk_level": "low",
+      "details": {
+        "country_code": "+55",
+        "national_format": "(11) 98765-4321",
+        "international_format": "+55 11 98765-4321",
+        "type": "mobile",
+        "carrier": "Vivo",
+        "region": "São Paulo"
+      },
+      "confidence": 0.98,
+      "processing_time": 0.045
+    },
+    {
+      "input": "11987654321",
+      "normalized": "+55 11 98765-4321",
+      "valid": true,
+      "risk_level": "low",
+      "details": {
+        "country_code": "+55",
+        "national_format": "(11) 98765-4321",
+        "international_format": "+55 11 98765-4321",
+        "type": "mobile",
+        "carrier": "Vivo",
+        "region": "São Paulo"
+      },
+      "confidence": 0.92,
+      "processing_time": 0.052
+    }
+  ],
+  "invalid": [
+    "+1234567890"
+  ],
+  "metadata": {
+    "total_processed": 3,
+    "total_valid": 2,
+    "total_invalid": 1,
+    "average_confidence": 0.95,
+    "processing_time": 0.097,
+    "credits_used": 3
+  }
+}
+```
+
+</ResponseExample>
+
+## Tipos de Validação
+
+### 1. Validação de E-mails
+
+Verifica múltiplos aspectos:
+- **Sintaxe**: Formato do e-mail
+- **Domínio**: Existência do domínio
+- **MX Records**: Registros de e-mail do domínio
+- **SMTP**: Conectividade com servidor de e-mail
+- **Descartável**: Se é e-mail temporário
+- **Provedor**: Identificação do provedor
+
+### 2. Validação de Telefones
+
+Inclui:
+- **Formato**: Validação do formato do número
+- **País**: Identificação do país
+- **Tipo**: Móvel, fixo ou VoIP
+- **Operadora**: Identificação da operadora
+- **Região**: Região/estado do número
+
+### 3. Validação de CNPJ
+
+Verifica:
+- **Dígitos**: Sequência numérica
+- **Check digits**: Dígitos verificadores
+- **Formatação**: Formato padrão brasileiro
+- **Status**: Status na Receita Federal
+
+### 4. Validação de Domínios
+
+Analisa:
+- **DNS**: Resolução DNS
+- **MX Records**: Registros de e-mail
+- **SSL**: Certificado SSL válido
+- **Idade**: Idade do domínio
+
+## Interpretação dos Resultados
+
+### Risk Levels
+
+| Nível | Descrição | Ação Recomendada |
+|-------|-----------|------------------|
+| `low` | Baixo risco, dados confiáveis | Usar normalmente |
+| `medium` | Risco moderado | Verificar manualmente |
+| `high` | Alto risco | Evitar ou investigar |
+
+### Confidence Levels
+
+| Faixa | Interpretação |
+|-------|---------------|
+| 0.9 - 1.0 | Muito confiável |
+| 0.7 - 0.9 | Confiável |
+| 0.5 - 0.7 | Moderadamente confiável |
+| < 0.5 | Pouco confiável |
+
+## Casos de Uso
+
+### 1. Limpeza de Base de E-mails
+
+```javascript
+// Limpar lista de e-mails antes de campanha
+async function cleanEmailList(emails) {
+  const result = await validateEmails(emails, {
+    check_mx: true,
+    check_disposable: true
+  });
+  
+  // Filtrar apenas e-mails seguros
+  const cleanList = result.valid.filter(email => 
+    email.risk_level === 'low' && 
+    !email.details.disposable &&
+    email.confidence > 0.8
+  );
+  
+  return cleanList.map(email => email.normalized);
+}
+```
+
+### 2. Validação em Tempo Real
+
+```python
+def validate_realtime(data_type, value):
+    """Validação em tempo real para formulários"""
+    validator = SpeedioValidator()
+    
+    if data_type == 'email':
+        result = validator.validate_emails([value])
+        return {
+            'valid': len(result['valid']) > 0,
+            'risk': result['validated'][0]['risk_level'] if result['validated'] else 'high',
+            'suggestion': result['validated'][0]['details'].get('typo_suggestion')
+        }
+    
+    elif data_type == 'phone':
+        result = validator.validate_phones([value])
+        return {
+            'valid': result['validated'][0]['valid'] if result['validated'] else False,
+            'formatted': result['validated'][0]['normalized'] if result['validated'] else None,
+            'type': result['validated'][0]['details'].get('type')
+        }
+```
+
+### 3. Análise de Qualidade
+
+```php
+function analyzeDataQuality($emails) {
+    $validator = new SpeedioValidator();
+    $result = $validator->validateEmails($emails);
+    
+    $total = count($emails);
+    $valid = count($result['valid']);
+    $risky = count($result['risky']);
+    $disposable = count($result['disposable']);
+    
+    return [
+        'quality_score' => ($valid / $total) * 100,
+        'risk_score' => ($risky / $total) * 100,
+        'disposable_rate' => ($disposable / $total) * 100,
+        'recommendation' => $valid / $total > 0.8 ? 'Good quality' : 'Needs cleaning'
+    ];
+}
+```
+
+## Limites e Custos
+
+| Tipo | Custo por Validação | Máx. por Requisição |
+|------|-------------------|-------------------|
+| Email | 0.1 créditos | 1000 |
+| Phone | 0.05 créditos | 1000 |
+| CNPJ | 0.1 créditos | 500 |
+| Domain | 0.1 créditos | 500 |
+
+## Performance
+
+### Tempo de Resposta Médio
+
+- **E-mail**: 50-200ms por item
+- **Telefone**: 20-80ms por item  
+- **CNPJ**: 30-100ms por item
+- **Domínio**: 100-300ms por item
+
+### Otimização
+
+<AccordionGroup>
+  <Accordion title="Processamento em Lotes">
+    ```javascript
+    // ✅ Processe até 1000 e-mails por vez
+    const batchSize = 1000;
+    const results = [];
+    
+    for (let i = 0; i < emails.length; i += batchSize) {
+      const batch = emails.slice(i, i + batchSize);
+      const batchResult = await validateEmails(batch);
+      results.push(...batchResult.validated);
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Cache de Validações">
+    ```python
+    from functools import lru_cache
+    import hashlib
+    
+    @lru_cache(maxsize=10000)
+    def validate_cached(data_type, data_hash):
+        # Cache baseado em hash dos dados
+        return validate_data(data_type, data)
+    ```
+  </Accordion>
+
+  <Accordion title="Validação Assíncrona">
+    ```javascript
+    // Para grandes volumes, use processamento assíncrono
+    const asyncValidate = async (emails) => {
+      const promises = [];
+      const batchSize = 100;
+      
+      for (let i = 0; i < emails.length; i += batchSize) {
+        const batch = emails.slice(i, i + batchSize);
+        promises.push(validateEmails(batch));
+      }
+      
+      const results = await Promise.all(promises);
+      return results.flat();
+    };
+    ```
+  </Accordion>
+</AccordionGroup>

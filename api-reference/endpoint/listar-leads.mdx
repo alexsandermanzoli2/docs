@@ -1,0 +1,339 @@
+---
+title: 'Get Leads'
+api: 'GET /v1/leads'
+description: 'Retrieve a list of leads from your account'
+---
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of lead objects
+  
+  <Expandable title="Lead Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the lead
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Lead's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Lead's full name
+    </ResponseField>
+    
+    <ResponseField name="first_name" type="string">
+      Lead's first name
+    </ResponseField>
+    
+    <ResponseField name="last_name" type="string">
+      Lead's last name
+    </ResponseField>
+    
+    <ResponseField name="phone" type="string">
+      Lead's phone number with country code
+    </ResponseField>
+    
+    <ResponseField name="company" type="object">
+      Company information
+      
+      <Expandable title="Company Object">
+        <ResponseField name="name" type="string">
+          Company name
+        </ResponseField>
+        
+        <ResponseField name="domain" type="string">
+          Company website domain
+        </ResponseField>
+        
+        <ResponseField name="cnpj" type="string">
+          Company CNPJ (Brazilian tax ID)
+        </ResponseField>
+        
+        <ResponseField name="industry" type="string">
+          Industry classification
+        </ResponseField>
+        
+        <ResponseField name="size" type="string">
+          Company size range
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="position" type="string">
+      Lead's job title
+    </ResponseField>
+    
+    <ResponseField name="linkedin_url" type="string">
+      Lead's LinkedIn profile URL
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Lead status: `active`, `qualified`, `unqualified`, `converted`
+    </ResponseField>
+    
+    <ResponseField name="score" type="integer">
+      Lead score (0-100)
+    </ResponseField>
+    
+    <ResponseField name="tags" type="array">
+      Array of tags associated with the lead
+    </ResponseField>
+    
+    <ResponseField name="custom_fields" type="object">
+      Custom field values
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp of creation
+    </ResponseField>
+    
+    <ResponseField name="updated_at" type="string">
+      ISO 8601 timestamp of last update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination information
+  
+  <Expandable title="Pagination Object">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="limit" type="integer">
+      Number of items per page
+    </ResponseField>
+    
+    <ResponseField name="total" type="integer">
+      Total number of items
+    </ResponseField>
+    
+    <ResponseField name="pages" type="integer">
+      Total number of pages
+    </ResponseField>
+    
+    <ResponseField name="has_more" type="boolean">
+      Whether there are more pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl --request GET \
+  --url 'https://api.speedio.com.br/v1/leads?page=1&limit=20' \
+  --header 'Authorization: Bearer YOUR_API_KEY' \
+  --header 'Content-Type: application/json'
+```
+
+```javascript Node.js
+const axios = require('axios');
+
+const options = {
+  method: 'GET',
+  url: 'https://api.speedio.com.br/v1/leads',
+  params: {
+    page: 1,
+    limit: 20,
+    status: 'active'
+  },
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY',
+    'Content-Type': 'application/json'
+  }
+};
+
+axios.request(options).then(function (response) {
+  console.log(response.data);
+}).catch(function (error) {
+  console.error(error);
+});
+```
+
+```python Python
+import requests
+
+url = "https://api.speedio.com.br/v1/leads"
+
+params = {
+    "page": 1,
+    "limit": 20,
+    "status": "active"
+}
+
+headers = {
+    "Authorization": "Bearer YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+
+response = requests.get(url, headers=headers, params=params)
+
+print(response.json())
+```
+
+```php PHP
+<?php
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+  CURLOPT_URL => "https://api.speedio.com.br/v1/leads?page=1&limit=20&status=active",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 0,
+  CURLOPT_FOLLOWLOCATION => true,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "GET",
+  CURLOPT_HTTPHEADER => [
+    "Authorization: Bearer YOUR_API_KEY",
+    "Content-Type: application/json"
+  ],
+]);
+
+$response = curl_exec($curl);
+
+curl_close($curl);
+echo $response;
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json Response
+{
+  "data": [
+    {
+      "id": "lead_abc123",
+      "email": "john.doe@techcorp.com",
+      "name": "John Doe",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+55 11 98765-4321",
+      "company": {
+        "name": "TechCorp Brasil",
+        "domain": "techcorp.com.br",
+        "cnpj": "12.345.678/0001-90",
+        "industry": "Technology",
+        "size": "50-200"
+      },
+      "position": "Head of Sales",
+      "linkedin_url": "https://linkedin.com/in/johndoe",
+      "status": "active",
+      "score": 85,
+      "tags": ["hot_lead", "decision_maker", "sao_paulo"],
+      "custom_fields": {
+        "budget": "R$ 50.000 - R$ 100.000",
+        "timeline": "Q1 2024"
+      },
+      "created_at": "2024-01-10T14:30:00Z",
+      "updated_at": "2024-01-15T09:15:00Z"
+    },
+    {
+      "id": "lead_def456",
+      "email": "maria.silva@innovate.com.br",
+      "name": "Maria Silva",
+      "first_name": "Maria",
+      "last_name": "Silva",
+      "phone": "+55 21 97654-3210",
+      "company": {
+        "name": "Innovate Solutions",
+        "domain": "innovate.com.br",
+        "cnpj": "98.765.432/0001-10",
+        "industry": "Software",
+        "size": "10-50"
+      },
+      "position": "CEO",
+      "linkedin_url": "https://linkedin.com/in/mariasilva",
+      "status": "qualified",
+      "score": 92,
+      "tags": ["c_level", "rio_de_janeiro", "saas"],
+      "custom_fields": {
+        "current_solution": "Competitor X",
+        "pain_points": "Integration, Reporting"
+      },
+      "created_at": "2024-01-08T10:00:00Z",
+      "updated_at": "2024-01-14T16:45:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "pages": 8,
+    "has_more": true
+  }
+}
+```
+
+</ResponseExample>
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer" default="20">
+  Number of leads per page (max: 100)
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by lead status. Options: `active`, `qualified`, `unqualified`, `converted`
+</ParamField>
+
+<ParamField query="score_min" type="integer">
+  Minimum lead score (0-100)
+</ParamField>
+
+<ParamField query="score_max" type="integer">
+  Maximum lead score (0-100)
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Comma-separated list of tags to filter by
+</ParamField>
+
+<ParamField query="company_size" type="string">
+  Filter by company size. Options: `1-10`, `10-50`, `50-200`, `200-1000`, `1000+`
+</ParamField>
+
+<ParamField query="industry" type="string">
+  Filter by industry
+</ParamField>
+
+<ParamField query="state" type="string">
+  Filter by Brazilian state code (e.g., `SP`, `RJ`, `MG`)
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  Filter leads created after this date (ISO 8601)
+</ParamField>
+
+<ParamField query="created_before" type="string">
+  Filter leads created before this date (ISO 8601)
+</ParamField>
+
+<ParamField query="updated_after" type="string">
+  Filter leads updated after this date (ISO 8601)
+</ParamField>
+
+<ParamField query="updated_before" type="string">
+  Filter leads updated before this date (ISO 8601)
+</ParamField>
+
+<ParamField query="sort" type="string" default="-created_at">
+  Sort field. Prefix with `-` for descending. Options: `created_at`, `updated_at`, `score`, `name`
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Comma-separated list of fields to include in response
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search leads by name, email, company, or phone
+</ParamField>

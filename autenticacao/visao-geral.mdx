@@ -1,0 +1,168 @@
+---
+title: Visão Geral da Autenticação
+description: 'Entenda como funciona a autenticação na API Speedio'
+---
+
+# Autenticação na API Speedio
+
+A API Speedio utiliza **Basic Authentication** para autenticar suas requisições. Este método é simples, seguro e amplamente suportado.
+
+## Como Funciona
+
+A autenticação Basic Auth funciona enviando suas credenciais codificadas em Base64 no header `Authorization` de cada requisição.
+
+```bash
+Authorization: Basic base64(username:password)
+```
+
+## Fluxo de Autenticação
+
+<Steps>
+  <Step title="Obtenha suas Credenciais">
+    Entre em contato com a equipe Speedio para receber suas credenciais de acesso:
+    - **Username**: Seu nome de usuário único
+    - **Password**: Sua senha de acesso
+  </Step>
+  
+  <Step title="Configure Variáveis de Ambiente">
+    Por motivos de segurança, configure suas credenciais como variáveis de ambiente:
+    ```bash
+    export SPEEDIO_USERNAME="seu_usuario"
+    export SPEEDIO_PASSWORD="sua_senha"
+    ```
+  </Step>
+  
+  <Step title="Codifique em Base64">
+    Combine username e password separados por `:` e codifique em Base64:
+    ```bash
+    echo -n "${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD}" | base64
+    ```
+  </Step>
+  
+  <Step title="Inclua no Header">
+    Adicione o header Authorization em todas as requisições:
+    ```bash
+    curl -H "Authorization: Basic dGVzdHVzZXI6c3BkdGVzdHVzZXI=" \
+         'https://api-get-leads.speedio.com.br/endpoint'
+    ```
+  </Step>
+</Steps>
+
+## Exemplo Prático
+
+<CodeGroup>
+
+```bash cURL
+# Configure as variáveis de ambiente primeiro
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha"
+
+# Faça a requisição
+curl -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+     -H "Content-Type: application/json" \
+     'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]'
+```
+
+```javascript Node.js
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+const headers = {
+  'Authorization': `Basic ${auth}`,
+  'Content-Type': 'application/json'
+};
+```
+
+```python Python
+import base64
+import os
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+headers = {
+    'Authorization': f'Basic {auth}',
+    'Content-Type': 'application/json'
+}
+```
+
+```php PHP
+$username = $_ENV['SPEEDIO_USERNAME'];
+$password = $_ENV['SPEEDIO_PASSWORD'];
+
+$auth = base64_encode($username . ':' . $password);
+
+$headers = [
+    'Authorization: Basic ' . $auth,
+    'Content-Type: application/json'
+];
+```
+
+</CodeGroup>
+
+## Códigos de Status de Autenticação
+
+| Status | Descrição | Solução |
+|--------|-----------|---------|
+| `200` | ✅ Autenticação bem-sucedida | Continue normalmente |
+| `401` | ❌ Credenciais inválidas | Verifique username e password |
+| `403` | ❌ Acesso negado | Verifique permissões da conta |
+| `429` | ⚠️ Limite de taxa excedido | Aguarde antes de tentar novamente |
+
+## Melhores Práticas de Segurança
+
+<CardGroup cols={2}>
+  <Card title="✅ Faça" icon="check">
+    - Use variáveis de ambiente
+    - Rotacione credenciais regularmente
+    - Use HTTPS sempre
+    - Monitore uso da API
+  </Card>
+  
+  <Card title="❌ Não Faça" icon="times">
+    - Hardcode credenciais no código
+    - Compartilhe credenciais
+    - Use HTTP (sem SSL)
+    - Ignore logs de segurança
+  </Card>
+</CardGroup>
+
+## Testando sua Autenticação
+
+Para verificar se suas credenciais estão funcionando:
+
+```bash
+# Teste rápido
+curl -I -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+     'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]'
+```
+
+Se você receber um status `200`, sua autenticação está funcionando corretamente.
+
+<Warning>
+  **Importante**: Mantenha suas credenciais seguras. Se suspeitar que foram comprometidas, entre em contato imediatamente com nossa equipe de suporte.
+</Warning>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Configuração Detalhada"
+    icon="gear"
+    href="/autenticacao/configuracao"
+  >
+    Configure suas credenciais em diferentes ambientes
+  </Card>
+  
+  <Card
+    title="Primeira Requisição"
+    icon="rocket"
+    href="/inicio-rapido"
+  >
+    Faça sua primeira chamada à API
+  </Card>
+</CardGroup>

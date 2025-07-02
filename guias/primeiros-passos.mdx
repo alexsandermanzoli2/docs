@@ -1,0 +1,767 @@
+---
+title: Primeiros Passos
+description: 'Guia completo para começar a usar a API Speedio'
+---
+
+# Primeiros Passos com a API Speedio
+
+Este guia irá te conduzir através dos passos fundamentais para começar a usar a API Speedio de forma eficiente e segura.
+
+## Antes de Começar
+
+### Pré-requisitos
+
+<CardGroup cols={2}>
+  <Card title="Credenciais de Acesso" icon="key">
+    Entre em contato com a equipe Speedio para obter suas credenciais de API
+  </Card>
+  <Card title="Ambiente de Desenvolvimento" icon="code">
+    Configure seu ambiente com as ferramentas necessárias
+  </Card>
+  <Card title="Conhecimento Básico" icon="book">
+    Familiaridade com APIs REST e Basic Authentication
+  </Card>
+  <Card title="Créditos API" icon="credit-card">
+    Verifique seu saldo de créditos no dashboard
+  </Card>
+</CardGroup>
+
+### Ferramentas Recomendadas
+
+- **Cliente HTTP**: cURL, Postman, ou Insomnia
+- **Editor de Código**: VS Code, Sublime Text, ou similar
+- **Terminal**: Para executar comandos bash
+- **Git**: Para controle de versão (opcional)
+
+## Passo 1: Configuração Inicial
+
+### 1.1 Configurar Variáveis de Ambiente
+
+<Tabs>
+  <Tab title="Linux/macOS">
+    ```bash
+    # Adicione ao ~/.bashrc, ~/.zshrc, ou ~/.profile
+    export SPEEDIO_USERNAME="seu_usuario"
+    export SPEEDIO_PASSWORD="sua_senha"
+    
+    # Recarregue o shell
+    source ~/.bashrc
+    
+    # Verifique se as variáveis foram definidas
+    echo "Username: $SPEEDIO_USERNAME"
+    echo "Password configurado: $([ -n "$SPEEDIO_PASSWORD" ] && echo "✅" || echo "❌")"
+    ```
+  </Tab>
+  
+  <Tab title="Windows">
+    ```cmd
+    REM Command Prompt (temporário)
+    set SPEEDIO_USERNAME=seu_usuario
+    set SPEEDIO_PASSWORD=sua_senha
+    
+    REM PowerShell (temporário)
+    $env:SPEEDIO_USERNAME="seu_usuario"
+    $env:SPEEDIO_PASSWORD="sua_senha"
+    
+    REM Para configuração permanente, use o Painel de Controle > Sistema > Variáveis de Ambiente
+    ```
+  </Tab>
+  
+  <Tab title="Arquivo .env">
+    ```bash
+    # Crie um arquivo .env na raiz do seu projeto
+    SPEEDIO_USERNAME=seu_usuario
+    SPEEDIO_PASSWORD=sua_senha
+    
+    # Adicione ao .gitignore
+    echo ".env" >> .gitignore
+    ```
+  </Tab>
+</Tabs>
+
+### 1.2 Testar Conectividade
+
+Primeiro, vamos verificar se suas credenciais estão funcionando:
+
+```bash
+# Teste básico de conectividade
+curl -I \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]'
+```
+
+**Resultado esperado**: Status `200 OK`
+
+<Accordion title="Solução de Problemas de Conectividade">
+  - **401 Unauthorized**: Verifique suas credenciais
+  - **403 Forbidden**: Conta pode não ter permissão
+  - **Timeout**: Verifique sua conexão de internet
+  - **SSL/TLS Error**: Atualize seu cliente HTTP
+</Accordion>
+
+## Passo 2: Primeira Requisição
+
+### 2.1 Buscar Informações de uma Empresa
+
+Vamos fazer nossa primeira chamada real à API:
+
+<CodeGroup>
+
+```bash cURL
+# Buscar informações da Speedio (CNPJ: 21071712000171)
+curl -G \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  -H "Content-Type: application/json" \
+  --data-urlencode 'cnpjs=["21071712000171"]' \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj'
+```
+
+```javascript Node.js
+// Instale as dependências primeiro: npm install axios dotenv
+require('dotenv').config();
+const axios = require('axios');
+
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+
+if (!username || !password) {
+  console.error('❌ Credenciais não configuradas');
+  process.exit(1);
+}
+
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+async function primeiraRequisicao() {
+  try {
+    console.log('🔍 Buscando informações da empresa...');
+    
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: {
+          cnpjs: JSON.stringify(['21071712000171'])
+        },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const empresa = response.data[0];
+    
+    if (empresa) {
+      console.log('✅ Empresa encontrada:');
+      console.log(`   Razão Social: ${empresa.razao_social}`);
+      console.log(`   Nome Fantasia: ${empresa.nome_fantasia}`);
+      console.log(`   CNPJ: ${empresa.cnpj}`);
+      console.log(`   Website: ${empresa.website}`);
+      console.log(`   Cidade: ${empresa.location.city}/${empresa.location.uf}`);
+      console.log(`   Funcionários: ${empresa.qnt_funcionario_empresa}`);
+      console.log(`   Faturamento: ${empresa.faixa_faturamento_empresa}`);
+    } else {
+      console.log('❌ Empresa não encontrada');
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro na requisição:', error.response?.data || error.message);
+  }
+}
+
+primeiraRequisicao();
+```
+
+```python Python
+# Instale as dependências primeiro: pip install requests python-dotenv
+import os
+import json
+import base64
+import requests
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+
+if not username or not password:
+    print('❌ Credenciais não configuradas')
+    exit(1)
+
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+def primeira_requisicao():
+    try:
+        print('🔍 Buscando informações da empresa...')
+        
+        url = "https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj"
+        params = {'cnpjs': json.dumps(['21071712000171'])}
+        headers = {
+            'Authorization': f'Basic {auth}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        
+        empresas = response.json()
+        
+        if empresas:
+            empresa = empresas[0]
+            print('✅ Empresa encontrada:')
+            print(f'   Razão Social: {empresa["razao_social"]}')
+            print(f'   Nome Fantasia: {empresa["nome_fantasia"]}')
+            print(f'   CNPJ: {empresa["cnpj"]}')
+            print(f'   Website: {empresa["website"]}')
+            print(f'   Cidade: {empresa["location"]["city"]}/{empresa["location"]["uf"]}')
+            print(f'   Funcionários: {empresa["qnt_funcionario_empresa"]}')
+            print(f'   Faturamento: {empresa["faixa_faturamento_empresa"]}')
+        else:
+            print('❌ Empresa não encontrada')
+            
+    except requests.exceptions.RequestException as e:
+        print(f'❌ Erro na requisição: {e}')
+
+if __name__ == "__main__":
+    primeira_requisicao()
+```
+
+</CodeGroup>
+
+### 2.2 Interpretar a Resposta
+
+A resposta da API contém informações detalhadas sobre a empresa:
+
+```json
+{
+  "cnpj": "21071712000171",
+  "razao_social": "SPEED IO - SERVICOS ESPECIALIZADOS LTDA",
+  "nome_fantasia": "SPEEDIO",
+  "location": {
+    "uf": "ES",
+    "city": "Colatina",
+    "bairro": "CENTRO",
+    "cep": "29700010"
+  },
+  "website": "https://speedio.com.br/",
+  "qnt_funcionario_empresa": "51 a 100",
+  "faixa_faturamento_empresa": "10M a 30M"
+}
+```
+
+## Passo 3: Explorar Funcionalidades
+
+### 3.1 Buscar Múltiplas Empresas
+
+<CodeGroup>
+
+```bash cURL
+# Buscar várias empresas de uma vez
+curl -G \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  -H "Content-Type: application/json" \
+  --data-urlencode 'cnpjs=["21071712000171", "12345678000195", "98765432000110"]' \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj'
+```
+
+```javascript JavaScript
+async function buscarMultiplasEmpresas() {
+  const cnpjs = [
+    '21071712000171',  // Speedio
+    '12345678000195',  // Exemplo 1
+    '98765432000110'   // Exemplo 2
+  ];
+  
+  try {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: { cnpjs: JSON.stringify(cnpjs) },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log(`✅ Encontradas ${response.data.length} empresas de ${cnpjs.length} consultadas`);
+    
+    response.data.forEach((empresa, index) => {
+      console.log(`\n${index + 1}. ${empresa.nome_fantasia}`);
+      console.log(`   CNPJ: ${empresa.cnpj}`);
+      console.log(`   Localização: ${empresa.location.city}/${empresa.location.uf}`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro:', error.response?.data || error.message);
+  }
+}
+```
+
+</CodeGroup>
+
+### 3.2 Trabalhar com Dados Estruturados
+
+```javascript
+// Função para extrair insights dos dados
+function analisarEmpresa(empresa) {
+  const insights = {
+    nome: empresa.nome_fantasia || empresa.razao_social,
+    porte: classificarPorte(empresa.qnt_funcionario_empresa),
+    receita: empresa.faixa_faturamento_empresa,
+    localizacao: `${empresa.location.city}/${empresa.location.uf}`,
+    idade: empresa.idade_empresa,
+    setor_principal: empresa.cnae_primario?.cnae_desc,
+    tem_website: !!empresa.website,
+    tem_filiais: empresa.qnt_filiais > 0,
+    administrador: empresa.administrador
+  };
+  
+  return insights;
+}
+
+function classificarPorte(funcionarios) {
+  if (!funcionarios) return 'Não informado';
+  
+  const ranges = {
+    '1 a 10': 'Microempresa',
+    '11 a 50': 'Pequena',
+    '51 a 100': 'Média',
+    '101 a 500': 'Grande',
+    '500+': 'Muito Grande'
+  };
+  
+  return ranges[funcionarios] || 'Não classificado';
+}
+
+// Usar a análise
+const empresa = response.data[0];
+const insights = analisarEmpresa(empresa);
+console.log('📊 Insights da empresa:', insights);
+```
+
+## Passo 4: Implementar Boas Práticas
+
+### 4.1 Tratamento de Erros
+
+```javascript
+class SpeedioAPIError extends Error {
+  constructor(message, status, response) {
+    super(message);
+    this.name = 'SpeedioAPIError';
+    this.status = status;
+    this.response = response;
+  }
+}
+
+async function buscarEmpresaSeguro(cnpj) {
+  try {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: { cnpjs: JSON.stringify([cnpj]) },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 segundos
+      }
+    );
+    
+    return response.data[0] || null;
+    
+  } catch (error) {
+    if (error.response) {
+      // Erro da API
+      switch (error.response.status) {
+        case 401:
+          throw new SpeedioAPIError('Credenciais inválidas', 401, error.response);
+        case 403:
+          throw new SpeedioAPIError('Acesso negado', 403, error.response);
+        case 429:
+          throw new SpeedioAPIError('Limite de requisições excedido', 429, error.response);
+        case 500:
+          throw new SpeedioAPIError('Erro interno do servidor', 500, error.response);
+        default:
+          throw new SpeedioAPIError(`Erro HTTP ${error.response.status}`, error.response.status, error.response);
+      }
+    } else if (error.request) {
+      // Erro de rede
+      throw new SpeedioAPIError('Erro de conectividade', 0, null);
+    } else {
+      // Erro de configuração
+      throw new SpeedioAPIError('Erro de configuração da requisição', 0, null);
+    }
+  }
+}
+
+// Uso com tratamento
+try {
+  const empresa = await buscarEmpresaSeguro('21071712000171');
+  if (empresa) {
+    console.log('✅ Empresa encontrada:', empresa.nome_fantasia);
+  } else {
+    console.log('⚠️ Empresa não encontrada');
+  }
+} catch (error) {
+  if (error instanceof SpeedioAPIError) {
+    console.error(`❌ Erro da API [${error.status}]: ${error.message}`);
+  } else {
+    console.error('❌ Erro inesperado:', error.message);
+  }
+}
+```
+
+### 4.2 Rate Limiting e Retry
+
+```javascript
+class RateLimiter {
+  constructor(requestsPerMinute = 100) {
+    this.requests = [];
+    this.limit = requestsPerMinute;
+  }
+  
+  async waitIfNeeded() {
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    
+    // Remove requisições antigas
+    this.requests = this.requests.filter(time => time > oneMinuteAgo);
+    
+    if (this.requests.length >= this.limit) {
+      const oldestRequest = Math.min(...this.requests);
+      const waitTime = 60000 - (now - oldestRequest);
+      
+      console.log(`⏳ Rate limit atingido. Aguardando ${Math.ceil(waitTime / 1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.requests.push(now);
+  }
+}
+
+async function buscarComRetry(cnpj, maxTentativas = 3) {
+  const rateLimiter = new RateLimiter();
+  
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      await rateLimiter.waitIfNeeded();
+      
+      const empresa = await buscarEmpresaSeguro(cnpj);
+      return empresa;
+      
+    } catch (error) {
+      console.log(`❌ Tentativa ${tentativa}/${maxTentativas} falhou: ${error.message}`);
+      
+      if (tentativa === maxTentativas) {
+        throw error;
+      }
+      
+      // Aguardar antes da próxima tentativa (backoff exponencial)
+      const waitTime = Math.pow(2, tentativa) * 1000;
+      console.log(`⏳ Aguardando ${waitTime / 1000}s antes da próxima tentativa...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+  }
+}
+```
+
+### 4.3 Cache Local
+
+```javascript
+class CacheLocal {
+  constructor(ttlMinutos = 60) {
+    this.cache = new Map();
+    this.ttl = ttlMinutos * 60 * 1000; // Converter para ms
+  }
+  
+  get(key) {
+    const item = this.cache.get(key);
+    
+    if (!item) return null;
+    
+    if (Date.now() > item.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return item.data;
+  }
+  
+  set(key, data) {
+    this.cache.set(key, {
+      data,
+      expiry: Date.now() + this.ttl
+    });
+  }
+  
+  has(key) {
+    return this.get(key) !== null;
+  }
+  
+  clear() {
+    this.cache.clear();
+  }
+  
+  size() {
+    // Limpar itens expirados
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expiry) {
+        this.cache.delete(key);
+      }
+    }
+    return this.cache.size;
+  }
+}
+
+const cache = new CacheLocal(30); // 30 minutos
+
+async function buscarComCache(cnpj) {
+  // Verificar cache primeiro
+  if (cache.has(cnpj)) {
+    console.log('📋 Dados encontrados no cache');
+    return cache.get(cnpj);
+  }
+  
+  // Buscar na API
+  console.log('🌐 Buscando na API...');
+  const empresa = await buscarComRetry(cnpj);
+  
+  // Cachear resultado
+  if (empresa) {
+    cache.set(cnpj, empresa);
+  }
+  
+  return empresa;
+}
+```
+
+## Passo 5: Monitoramento e Logs
+
+### 5.1 Sistema de Logs
+
+```javascript
+class Logger {
+  constructor(level = 'info') {
+    this.levels = { error: 0, warn: 1, info: 2, debug: 3 };
+    this.level = level;
+  }
+  
+  log(level, message, data = null) {
+    if (this.levels[level] <= this.levels[this.level]) {
+      const timestamp = new Date().toISOString();
+      const logEntry = {
+        timestamp,
+        level: level.toUpperCase(),
+        message,
+        ...(data && { data })
+      };
+      
+      console.log(JSON.stringify(logEntry));
+    }
+  }
+  
+  error(message, error = null) {
+    this.log('error', message, error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    } : null);
+  }
+  
+  warn(message, data = null) { this.log('warn', message, data); }
+  info(message, data = null) { this.log('info', message, data); }
+  debug(message, data = null) { this.log('debug', message, data); }
+}
+
+const logger = new Logger('info');
+
+// Usar nos exemplos anteriores
+async function buscarEmpresaComLogs(cnpj) {
+  logger.info('Iniciando busca de empresa', { cnpj });
+  
+  try {
+    const empresa = await buscarComCache(cnpj);
+    
+    if (empresa) {
+      logger.info('Empresa encontrada com sucesso', {
+        cnpj,
+        nome: empresa.nome_fantasia,
+        cache_hit: cache.has(cnpj)
+      });
+    } else {
+      logger.warn('Empresa não encontrada', { cnpj });
+    }
+    
+    return empresa;
+    
+  } catch (error) {
+    logger.error('Erro ao buscar empresa', {
+      cnpj,
+      error: {
+        name: error.name,
+        message: error.message,
+        status: error.status
+      }
+    });
+    throw error;
+  }
+}
+```
+
+### 5.2 Métricas de Uso
+
+```javascript
+class MetricasUso {
+  constructor() {
+    this.metricas = {
+      requisicoes_total: 0,
+      requisicoes_sucesso: 0,
+      requisicoes_erro: 0,
+      tempo_resposta: [],
+      cache_hits: 0,
+      creditos_usados: 0,
+      empresas_encontradas: 0
+    };
+  }
+  
+  registrarRequisicao(sucesso, tempoMs, creditosUsados = 1, cacheHit = false) {
+    this.metricas.requisicoes_total++;
+    
+    if (sucesso) {
+      this.metricas.requisicoes_sucesso++;
+      this.metricas.creditos_usados += creditosUsados;
+    } else {
+      this.metricas.requisicoes_erro++;
+    }
+    
+    this.metricas.tempo_resposta.push(tempoMs);
+    
+    if (cacheHit) {
+      this.metricas.cache_hits++;
+    }
+  }
+  
+  registrarEmpresaEncontrada() {
+    this.metricas.empresas_encontradas++;
+  }
+  
+  obterResumo() {
+    const tempos = this.metricas.tempo_resposta;
+    
+    return {
+      ...this.metricas,
+      taxa_sucesso: this.metricas.requisicoes_total > 0 ? 
+        (this.metricas.requisicoes_sucesso / this.metricas.requisicoes_total * 100).toFixed(2) + '%' : '0%',
+      taxa_cache: this.metricas.requisicoes_total > 0 ? 
+        (this.metricas.cache_hits / this.metricas.requisicoes_total * 100).toFixed(2) + '%' : '0%',
+      tempo_medio: tempos.length > 0 ? 
+        (tempos.reduce((a, b) => a + b, 0) / tempos.length).toFixed(2) + 'ms' : '0ms',
+      tempo_maximo: tempos.length > 0 ? Math.max(...tempos) + 'ms' : '0ms'
+    };
+  }
+  
+  reset() {
+    this.metricas = {
+      requisicoes_total: 0,
+      requisicoes_sucesso: 0,
+      requisicoes_erro: 0,
+      tempo_resposta: [],
+      cache_hits: 0,
+      creditos_usados: 0,
+      empresas_encontradas: 0
+    };
+  }
+}
+
+const metricas = new MetricasUso();
+
+// Integrar com as funções existentes
+async function buscarEmpresaComMetricas(cnpj) {
+  const inicio = Date.now();
+  const cacheHit = cache.has(cnpj);
+  
+  try {
+    const empresa = await buscarEmpresaComLogs(cnpj);
+    const tempoDecorrido = Date.now() - inicio;
+    
+    metricas.registrarRequisicao(true, tempoDecorrido, 1, cacheHit);
+    
+    if (empresa) {
+      metricas.registrarEmpresaEncontrada();
+    }
+    
+    return empresa;
+    
+  } catch (error) {
+    const tempoDecorrido = Date.now() - inicio;
+    metricas.registrarRequisicao(false, tempoDecorrido, 0, cacheHit);
+    throw error;
+  }
+}
+
+// Exibir métricas periodicamente
+setInterval(() => {
+  console.log('📊 Métricas de uso:', metricas.obterResumo());
+}, 60000); // A cada 1 minuto
+```
+
+## Passo 6: Próximos Passos
+
+### Checklist de Progresso
+
+- [ ] ✅ Credenciais configuradas e testadas
+- [ ] ✅ Primeira requisição bem-sucedida
+- [ ] ✅ Tratamento de erros implementado
+- [ ] ✅ Cache local configurado
+- [ ] ✅ Sistema de logs funcionando
+- [ ] ✅ Métricas de uso implementadas
+
+### Próximas Funcionalidades para Explorar
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar Leads"
+    icon="users"
+    href="/endpoints/buscar-leads"
+  >
+    Explore a busca avançada de leads qualificados
+  </Card>
+  
+  <Card
+    title="Validação de Dados"
+    icon="check-circle"
+    href="/endpoints/validacao"
+  >
+    Valide e-mails, telefones e CNPJs
+  </Card>
+  
+  <Card
+    title="Melhores Práticas"
+    icon="star"
+    href="/guias/melhores-praticas"
+  >
+    Otimize seu uso da API
+  </Card>
+  
+  <Card
+    title="Tratamento de Erros"
+    icon="exclamation-triangle"
+    href="/guias/tratamento-erros"
+  >
+    Implemente tratamento robusto
+  </Card>
+</CardGroup>
+
+### Recursos Adicionais
+
+- **Dashboard**: Monitore seu uso em [app.speedio.com.br](https://app.speedio.com.br)
+- **Suporte**: suporte@speedio.com.br
+- **Status da API**: [status.speedio.com.br](https://status.speedio.com.br)
+- **Comunidade**: Participe do nosso Slack
+
+<Note>
+  **Dica**: Mantenha sempre um backup de suas configurações e implemente monitoramento em produção. A API Speedio é constantemente melhorada, então fique atento às atualizações na documentação.
+</Note>

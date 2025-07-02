@@ -1,0 +1,1266 @@
+---
+title: Tratamento de Erros
+description: 'Guia completo para implementar tratamento robusto de erros na API Speedio'
+---
+
+# Tratamento de Erros
+
+Um tratamento adequado de erros é essencial para criar aplicações robustas que usam a API Speedio. Este guia apresenta estratégias e implementações para lidar com diferentes tipos de erros.
+
+## Tipos de Erros
+
+### 1. Erros de Autenticação
+
+<ResponseField name="401 Unauthorized" type="error">
+  Credenciais inválidas ou expiradas
+  
+  **Causas comuns:**
+  - Username ou password incorretos
+  - Credenciais expiradas
+  - Header Authorization malformado
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="error">
+  Acesso negado ao recurso
+  
+  **Causas comuns:**
+  - Conta sem permissão para o endpoint
+  - Plano não inclui a funcionalidade
+  - IP bloqueado
+</ResponseField>
+
+### 2. Erros de Requisição
+
+<ResponseField name="400 Bad Request" type="error">
+  Requisição malformada ou parâmetros inválidos
+  
+  **Causas comuns:**
+  - JSON inválido no corpo da requisição
+  - Parâmetros obrigatórios ausentes
+  - Formato de dados incorreto
+</ResponseField>
+
+<ResponseField name="422 Unprocessable Entity" type="error">
+  Dados válidos mas não processáveis
+  
+  **Causas comuns:**
+  - CNPJ com formato correto mas inválido
+  - E-mail com sintaxe correta mas domínio inexistente
+</ResponseField>
+
+### 3. Erros de Rate Limiting
+
+<ResponseField name="429 Too Many Requests" type="error">
+  Limite de requisições excedido
+  
+  **Headers importantes:**
+  - `Retry-After`: Tempo para tentar novamente
+  - `X-RateLimit-Remaining`: Requisições restantes
+  - `X-RateLimit-Reset`: Quando o limite reseta
+</ResponseField>
+
+### 4. Erros do Servidor
+
+<ResponseField name="500 Internal Server Error" type="error">
+  Erro interno do servidor
+</ResponseField>
+
+<ResponseField name="502 Bad Gateway" type="error">
+  Problema no gateway/proxy
+</ResponseField>
+
+<ResponseField name="503 Service Unavailable" type="error">
+  Serviço temporariamente indisponível
+</ResponseField>
+
+<ResponseField name="504 Gateway Timeout" type="error">
+  Timeout no gateway
+</ResponseField>
+
+## Estratégias de Tratamento
+
+### 1. Hierarquia de Classes de Erro
+
+<CodeGroup>
+
+```javascript JavaScript
+// Classe base para erros da API Speedio
+class SpeedioAPIError extends Error {
+  constructor(message, status, response, originalError = null) {
+    super(message);
+    this.name = 'SpeedioAPIError';
+    this.status = status;
+    this.response = response;
+    this.originalError = originalError;
+    this.timestamp = new Date().toISOString();
+  }
+  
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      status: this.status,
+      timestamp: this.timestamp,
+      response: this.response ? {
+        status: this.response.status,
+        data: this.response.data
+      } : null
+    };
+  }
+}
+
+// Erros específicos
+class AuthenticationError extends SpeedioAPIError {
+  constructor(message, response) {
+    super(message, 401, response);
+    this.name = 'AuthenticationError';
+  }
+}
+
+class AuthorizationError extends SpeedioAPIError {
+  constructor(message, response) {
+    super(message, 403, response);
+    this.name = 'AuthorizationError';
+  }
+}
+
+class ValidationError extends SpeedioAPIError {
+  constructor(message, response, validationErrors = []) {
+    super(message, 400, response);
+    this.name = 'ValidationError';
+    this.validationErrors = validationErrors;
+  }
+}
+
+class RateLimitError extends SpeedioAPIError {
+  constructor(message, response, retryAfter = null) {
+    super(message, 429, response);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
+
+class ServerError extends SpeedioAPIError {
+  constructor(message, status, response) {
+    super(message, status, response);
+    this.name = 'ServerError';
+  }
+}
+
+class NetworkError extends SpeedioAPIError {
+  constructor(message, originalError) {
+    super(message, 0, null, originalError);
+    this.name = 'NetworkError';
+  }
+}
+```
+
+```python Python
+import json
+from datetime import datetime
+from typing import Optional, Dict, Any, List
+
+class SpeedioAPIError(Exception):
+    """Classe base para erros da API Speedio"""
+    
+    def __init__(self, message: str, status: int = 0, response: Optional[Dict] = None, original_error: Optional[Exception] = None):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+        self.response = response
+        self.original_error = original_error
+        self.timestamp = datetime.now().isoformat()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'name': self.__class__.__name__,
+            'message': self.message,
+            'status': self.status,
+            'timestamp': self.timestamp,
+            'response': {
+                'status': self.response.get('status') if self.response else None,
+                'data': self.response.get('data') if self.response else None
+            } if self.response else None
+        }
+
+class AuthenticationError(SpeedioAPIError):
+    def __init__(self, message: str, response: Optional[Dict] = None):
+        super().__init__(message, 401, response)
+
+class AuthorizationError(SpeedioAPIError):
+    def __init__(self, message: str, response: Optional[Dict] = None):
+        super().__init__(message, 403, response)
+
+class ValidationError(SpeedioAPIError):
+    def __init__(self, message: str, response: Optional[Dict] = None, validation_errors: Optional[List] = None):
+        super().__init__(message, 400, response)
+        self.validation_errors = validation_errors or []
+
+class RateLimitError(SpeedioAPIError):
+    def __init__(self, message: str, response: Optional[Dict] = None, retry_after: Optional[int] = None):
+        super().__init__(message, 429, response)
+        self.retry_after = retry_after
+
+class ServerError(SpeedioAPIError):
+    def __init__(self, message: str, status: int, response: Optional[Dict] = None):
+        super().__init__(message, status, response)
+
+class NetworkError(SpeedioAPIError):
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
+        super().__init__(message, 0, None, original_error)
+```
+
+</CodeGroup>
+
+### 2. Interceptador de Erros
+
+<CodeGroup>
+
+```javascript JavaScript
+function parseSpeedioError(error) {
+  if (error.response) {
+    // Erro HTTP da API
+    const { status, data } = error.response;
+    const message = data?.message || data?.error || 'Erro na API';
+    
+    switch (status) {
+      case 401:
+        return new AuthenticationError(message, error.response);
+      
+      case 403:
+        return new AuthorizationError(message, error.response);
+      
+      case 400:
+        return new ValidationError(
+          message, 
+          error.response,
+          data?.validation_errors || []
+        );
+      
+      case 422:
+        return new ValidationError(
+          'Dados não processáveis', 
+          error.response,
+          data?.errors || []
+        );
+      
+      case 429:
+        const retryAfter = error.response.headers['retry-after'];
+        return new RateLimitError(
+          message, 
+          error.response,
+          retryAfter ? parseInt(retryAfter) : null
+        );
+      
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        return new ServerError(message, status, error.response);
+      
+      default:
+        return new SpeedioAPIError(message, status, error.response);
+    }
+  } else if (error.request) {
+    // Erro de rede
+    return new NetworkError('Erro de conectividade', error);
+  } else {
+    // Erro de configuração
+    return new SpeedioAPIError('Erro de configuração da requisição', 0, null, error);
+  }
+}
+
+// Interceptador para Axios
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    throw parseSpeedioError(error);
+  }
+);
+```
+
+```python Python
+import requests
+from typing import Union
+
+def parse_speedio_error(error: Union[requests.exceptions.RequestException, Exception]) -> SpeedioAPIError:
+    """Converte exceções em erros específicos da Speedio"""
+    
+    if isinstance(error, requests.exceptions.HTTPError):
+        response = error.response
+        status = response.status_code
+        
+        try:
+            data = response.json()
+            message = data.get('message') or data.get('error') or 'Erro na API'
+        except:
+            message = f'Erro HTTP {status}'
+        
+        response_dict = {
+            'status': status,
+            'data': data if 'data' in locals() else None
+        }
+        
+        if status == 401:
+            return AuthenticationError(message, response_dict)
+        elif status == 403:
+            return AuthorizationError(message, response_dict)
+        elif status in [400, 422]:
+            validation_errors = data.get('validation_errors', []) if 'data' in locals() else []
+            return ValidationError(message, response_dict, validation_errors)
+        elif status == 429:
+            retry_after = response.headers.get('retry-after')
+            return RateLimitError(message, response_dict, int(retry_after) if retry_after else None)
+        elif status >= 500:
+            return ServerError(message, status, response_dict)
+        else:
+            return SpeedioAPIError(message, status, response_dict)
+    
+    elif isinstance(error, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+        return NetworkError('Erro de conectividade', error)
+    
+    else:
+        return SpeedioAPIError('Erro inesperado', 0, None, error)
+
+# Wrapper para requisições
+def make_request_with_error_handling(func):
+    def wrapper(*args, **kwargs):
+        try:
+            response = func(*args, **kwargs)
+            response.raise_for_status()
+            return response
+        except Exception as e:
+            raise parse_speedio_error(e)
+    
+    return wrapper
+
+# Uso
+@make_request_with_error_handling
+def speedio_request(method, url, **kwargs):
+    return requests.request(method, url, **kwargs)
+```
+
+</CodeGroup>
+
+### 3. Retry com Backoff Exponencial
+
+<CodeGroup>
+
+```javascript JavaScript
+class RetryManager {
+  constructor(options = {}) {
+    this.maxRetries = options.maxRetries || 3;
+    this.baseDelay = options.baseDelay || 1000; // 1 segundo
+    this.maxDelay = options.maxDelay || 30000; // 30 segundos
+    this.backoffFactor = options.backoffFactor || 2;
+    this.retryableErrors = options.retryableErrors || [
+      'NetworkError',
+      'ServerError',
+      'RateLimitError'
+    ];
+  }
+  
+  async executeWithRetry(fn, context = {}) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= this.maxRetries + 1; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        
+        // Não tentar novamente se não for um erro "retryável"
+        if (!this.isRetryableError(error)) {
+          throw error;
+        }
+        
+        // Não tentar novamente se é a última tentativa
+        if (attempt > this.maxRetries) {
+          break;
+        }
+        
+        const delay = this.calculateDelay(attempt, error);
+        
+        console.warn(`❌ Tentativa ${attempt}/${this.maxRetries + 1} falhou: ${error.message}`);
+        console.info(`⏳ Aguardando ${delay / 1000}s antes da próxima tentativa...`);
+        
+        await this.sleep(delay);
+      }
+    }
+    
+    throw lastError;
+  }
+  
+  isRetryableError(error) {
+    return this.retryableErrors.includes(error.name);
+  }
+  
+  calculateDelay(attempt, error) {
+    // Para RateLimitError, respeitar o Retry-After
+    if (error.name === 'RateLimitError' && error.retryAfter) {
+      return error.retryAfter * 1000;
+    }
+    
+    // Backoff exponencial com jitter
+    const exponentialDelay = this.baseDelay * Math.pow(this.backoffFactor, attempt - 1);
+    const jitter = Math.random() * 0.1 * exponentialDelay; // 10% de jitter
+    
+    return Math.min(exponentialDelay + jitter, this.maxDelay);
+  }
+  
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Uso do RetryManager
+const retryManager = new RetryManager({
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 30000
+});
+
+async function buscarEmpresaComRetry(cnpj) {
+  return await retryManager.executeWithRetry(async () => {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: { cnpjs: JSON.stringify([cnpj]) },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    return response.data[0] || null;
+  });
+}
+```
+
+```python Python
+import asyncio
+import random
+import time
+from typing import Callable, Any, Optional, List
+from functools import wraps
+
+class RetryManager:
+    def __init__(self, max_retries: int = 3, base_delay: float = 1.0, 
+                 max_delay: float = 30.0, backoff_factor: float = 2.0,
+                 retryable_errors: Optional[List[str]] = None):
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.backoff_factor = backoff_factor
+        self.retryable_errors = retryable_errors or [
+            'NetworkError', 'ServerError', 'RateLimitError'
+        ]
+    
+    def execute_with_retry(self, func: Callable, *args, **kwargs) -> Any:
+        """Executa função com retry"""
+        last_error = None
+        
+        for attempt in range(1, self.max_retries + 2):
+            try:
+                return func(*args, **kwargs)
+            except SpeedioAPIError as error:
+                last_error = error
+                
+                if not self.is_retryable_error(error):
+                    raise error
+                
+                if attempt > self.max_retries:
+                    break
+                
+                delay = self.calculate_delay(attempt, error)
+                
+                print(f"❌ Tentativa {attempt}/{self.max_retries + 1} falhou: {error.message}")
+                print(f"⏳ Aguardando {delay:.1f}s antes da próxima tentativa...")
+                
+                time.sleep(delay)
+        
+        raise last_error
+    
+    async def execute_with_retry_async(self, func: Callable, *args, **kwargs) -> Any:
+        """Versão assíncrona do retry"""
+        last_error = None
+        
+        for attempt in range(1, self.max_retries + 2):
+            try:
+                if asyncio.iscoroutinefunction(func):
+                    return await func(*args, **kwargs)
+                else:
+                    return func(*args, **kwargs)
+            except SpeedioAPIError as error:
+                last_error = error
+                
+                if not self.is_retryable_error(error):
+                    raise error
+                
+                if attempt > self.max_retries:
+                    break
+                
+                delay = self.calculate_delay(attempt, error)
+                
+                print(f"❌ Tentativa {attempt}/{self.max_retries + 1} falhou: {error.message}")
+                print(f"⏳ Aguardando {delay:.1f}s antes da próxima tentativa...")
+                
+                await asyncio.sleep(delay)
+        
+        raise last_error
+    
+    def is_retryable_error(self, error: SpeedioAPIError) -> bool:
+        return type(error).__name__ in self.retryable_errors
+    
+    def calculate_delay(self, attempt: int, error: SpeedioAPIError) -> float:
+        # Para RateLimitError, respeitar o Retry-After
+        if isinstance(error, RateLimitError) and error.retry_after:
+            return float(error.retry_after)
+        
+        # Backoff exponencial com jitter
+        exponential_delay = self.base_delay * (self.backoff_factor ** (attempt - 1))
+        jitter = random.uniform(0, 0.1 * exponential_delay)
+        
+        return min(exponential_delay + jitter, self.max_delay)
+
+# Decorator para retry
+def with_retry(max_retries: int = 3, base_delay: float = 1.0):
+    def decorator(func):
+        retry_manager = RetryManager(max_retries=max_retries, base_delay=base_delay)
+        
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return retry_manager.execute_with_retry(func, *args, **kwargs)
+        
+        return wrapper
+    return decorator
+
+# Uso do decorator
+@with_retry(max_retries=3, base_delay=1.0)
+def buscar_empresa_com_retry(cnpj: str):
+    response = speedio_request(
+        'GET',
+        'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+        params={'cnpjs': json.dumps([cnpj])},
+        headers={
+            'Authorization': f'Basic {auth}',
+            'Content-Type': 'application/json'
+        }
+    )
+    
+    data = response.json()
+    return data[0] if data else None
+```
+
+</CodeGroup>
+
+### 4. Circuit Breaker
+
+<CodeGroup>
+
+```javascript JavaScript
+class CircuitBreaker {
+  constructor(options = {}) {
+    this.failureThreshold = options.failureThreshold || 5;
+    this.recoveryTimeout = options.recoveryTimeout || 60000; // 1 minuto
+    this.monitoringPeriod = options.monitoringPeriod || 120000; // 2 minutos
+    
+    this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+    this.failureCount = 0;
+    this.lastFailureTime = null;
+    this.successCount = 0;
+    
+    this.resetCounters();
+  }
+  
+  async execute(fn) {
+    if (this.state === 'OPEN') {
+      if (Date.now() - this.lastFailureTime >= this.recoveryTimeout) {
+        this.state = 'HALF_OPEN';
+        console.info('🔄 Circuit breaker em estado HALF_OPEN, testando recuperação...');
+      } else {
+        throw new Error('Circuit breaker OPEN - serviço indisponível');
+      }
+    }
+    
+    try {
+      const result = await fn();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+  
+  onSuccess() {
+    this.failureCount = 0;
+    
+    if (this.state === 'HALF_OPEN') {
+      this.successCount++;
+      
+      // Após 3 sucessos consecutivos, voltar ao estado CLOSED
+      if (this.successCount >= 3) {
+        this.state = 'CLOSED';
+        this.successCount = 0;
+        console.info('✅ Circuit breaker FECHADO - serviço recuperado');
+      }
+    }
+  }
+  
+  onFailure() {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.state === 'HALF_OPEN') {
+      this.state = 'OPEN';
+      this.successCount = 0;
+      console.warn('🔴 Circuit breaker ABERTO - falha durante teste de recuperação');
+    } else if (this.failureCount >= this.failureThreshold) {
+      this.state = 'OPEN';
+      console.warn(`🔴 Circuit breaker ABERTO - ${this.failureCount} falhas consecutivas`);
+    }
+  }
+  
+  getStatus() {
+    return {
+      state: this.state,
+      failureCount: this.failureCount,
+      successCount: this.successCount,
+      lastFailureTime: this.lastFailureTime,
+      nextRetryTime: this.state === 'OPEN' ? 
+        this.lastFailureTime + this.recoveryTimeout : null
+    };
+  }
+  
+  resetCounters() {
+    setInterval(() => {
+      if (this.state === 'CLOSED') {
+        this.failureCount = 0;
+      }
+    }, this.monitoringPeriod);
+  }
+}
+
+// Integração com RetryManager
+class ResilientClient {
+  constructor() {
+    this.retryManager = new RetryManager({
+      maxRetries: 3,
+      baseDelay: 1000
+    });
+    
+    this.circuitBreaker = new CircuitBreaker({
+      failureThreshold: 5,
+      recoveryTimeout: 60000
+    });
+  }
+  
+  async request(fn) {
+    return await this.circuitBreaker.execute(async () => {
+      return await this.retryManager.executeWithRetry(fn);
+    });
+  }
+  
+  getHealthStatus() {
+    return {
+      circuitBreaker: this.circuitBreaker.getStatus(),
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+const client = new ResilientClient();
+
+async function buscarEmpresaResilient(cnpj) {
+  return await client.request(async () => {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: { cnpjs: JSON.stringify([cnpj]) },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    return response.data[0] || null;
+  });
+}
+```
+
+</CodeGroup>
+
+### 5. Logs Estruturados de Erro
+
+<CodeGroup>
+
+```javascript JavaScript
+class ErrorLogger {
+  constructor(options = {}) {
+    this.logLevel = options.logLevel || 'error';
+    this.includeStackTrace = options.includeStackTrace !== false;
+    this.maxStackLines = options.maxStackLines || 10;
+  }
+  
+  logError(error, context = {}) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      level: 'ERROR',
+      error: {
+        name: error.name,
+        message: error.message,
+        status: error.status || null,
+        ...(error instanceof SpeedioAPIError && {
+          response: error.response,
+          originalError: error.originalError?.message
+        })
+      },
+      context,
+      ...(this.includeStackTrace && error.stack && {
+        stack: error.stack.split('\n').slice(0, this.maxStackLines)
+      })
+    };
+    
+    console.error(JSON.stringify(logEntry, null, 2));
+    
+    // Enviar para serviço de monitoramento (ex: Sentry, DataDog)
+    this.sendToMonitoring(logEntry);
+  }
+  
+  logRecovery(error, attempt, success = false) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      level: success ? 'INFO' : 'WARN',
+      event: success ? 'ERROR_RECOVERY' : 'RETRY_ATTEMPT',
+      error: {
+        name: error.name,
+        message: error.message,
+        status: error.status
+      },
+      attempt,
+      success
+    };
+    
+    console.log(JSON.stringify(logEntry));
+  }
+  
+  sendToMonitoring(logEntry) {
+    // Implementar integração com Sentry, DataDog, etc.
+    // Exemplo com Sentry:
+    // Sentry.captureException(error, { extra: context });
+  }
+}
+
+const errorLogger = new ErrorLogger();
+
+// Integrar com o cliente resiliente
+class LoggingResilientClient extends ResilientClient {
+  async request(fn, context = {}) {
+    try {
+      const result = await super.request(fn);
+      return result;
+    } catch (error) {
+      errorLogger.logError(error, context);
+      throw error;
+    }
+  }
+}
+```
+
+```python Python
+import logging
+import json
+import traceback
+from datetime import datetime
+from typing import Dict, Any, Optional
+
+class ErrorLogger:
+    def __init__(self, logger_name: str = 'speedio_api', log_level: int = logging.ERROR):
+        self.logger = logging.getLogger(logger_name)
+        self.logger.setLevel(log_level)
+        
+        # Configurar handler se não existir
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+    
+    def log_error(self, error: Exception, context: Optional[Dict[str, Any]] = None):
+        """Log estruturado de erro"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'level': 'ERROR',
+            'error': {
+                'name': type(error).__name__,
+                'message': str(error),
+                'status': getattr(error, 'status', None)
+            },
+            'context': context or {},
+            'stack_trace': traceback.format_exc()
+        }
+        
+        if isinstance(error, SpeedioAPIError):
+            log_entry['error'].update({
+                'response': error.response,
+                'original_error': str(error.original_error) if error.original_error else None
+            })
+        
+        self.logger.error(json.dumps(log_entry, indent=2, ensure_ascii=False))
+        
+        # Enviar para serviço de monitoramento
+        self.send_to_monitoring(error, context)
+    
+    def log_recovery(self, error: Exception, attempt: int, success: bool = False):
+        """Log de tentativa de recuperação"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'level': 'INFO' if success else 'WARN',
+            'event': 'ERROR_RECOVERY' if success else 'RETRY_ATTEMPT',
+            'error': {
+                'name': type(error).__name__,
+                'message': str(error),
+                'status': getattr(error, 'status', None)
+            },
+            'attempt': attempt,
+            'success': success
+        }
+        
+        if success:
+            self.logger.info(json.dumps(log_entry))
+        else:
+            self.logger.warning(json.dumps(log_entry))
+    
+    def send_to_monitoring(self, error: Exception, context: Optional[Dict] = None):
+        """Enviar erro para serviço de monitoramento"""
+        # Implementar integração com Sentry, DataDog, etc.
+        pass
+
+error_logger = ErrorLogger()
+
+# Decorator para logging automático
+def with_error_logging(context: Optional[Dict] = None):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as error:
+                error_logger.log_error(error, context)
+                raise
+        return wrapper
+    return decorator
+
+@with_error_logging({'operation': 'buscar_empresa'})
+def buscar_empresa_com_logging(cnpj: str):
+    return buscar_empresa_com_retry(cnpj)
+```
+
+</CodeGroup>
+
+## Estratégias Avançadas
+
+### 1. Fallback e Degradação Graceful
+
+```javascript
+class FallbackManager {
+  constructor() {
+    this.fallbackStrategies = new Map();
+  }
+  
+  registerFallback(operation, fallbackFn) {
+    this.fallbackStrategies.set(operation, fallbackFn);
+  }
+  
+  async executeWithFallback(operation, primaryFn, context = {}) {
+    try {
+      return await primaryFn();
+    } catch (error) {
+      console.warn(`❌ Operação principal falhou: ${error.message}`);
+      
+      const fallback = this.fallbackStrategies.get(operation);
+      if (fallback) {
+        console.info('🔄 Executando estratégia de fallback...');
+        try {
+          return await fallback(context, error);
+        } catch (fallbackError) {
+          console.error(`❌ Fallback também falhou: ${fallbackError.message}`);
+          throw error; // Lançar erro original
+        }
+      }
+      
+      throw error;
+    }
+  }
+}
+
+const fallbackManager = new FallbackManager();
+
+// Registrar fallbacks
+fallbackManager.registerFallback('buscar_empresa', async (context, error) => {
+  // Retornar dados do cache local se disponível
+  const cachedData = localStorage.getItem(`empresa_${context.cnpj}`);
+  if (cachedData) {
+    console.info('📋 Usando dados do cache local');
+    return JSON.parse(cachedData);
+  }
+  
+  // Retornar dados básicos do CNPJ se possível
+  if (context.cnpj) {
+    console.info('📊 Retornando dados básicos do CNPJ');
+    return {
+      cnpj: context.cnpj,
+      status: 'dados_limitados',
+      source: 'fallback'
+    };
+  }
+  
+  throw error;
+});
+
+// Uso
+async function buscarEmpresaComFallback(cnpj) {
+  return await fallbackManager.executeWithFallback(
+    'buscar_empresa',
+    () => buscarEmpresaResilient(cnpj),
+    { cnpj }
+  );
+}
+```
+
+### 2. Health Check e Monitoring
+
+```javascript
+class HealthMonitor {
+  constructor(options = {}) {
+    this.checkInterval = options.checkInterval || 30000; // 30 segundos
+    this.healthThreshold = options.healthThreshold || 0.8; // 80% de sucesso
+    this.windowSize = options.windowSize || 50; // Últimas 50 requisições
+    
+    this.requestHistory = [];
+    this.isHealthy = true;
+    this.lastHealthCheck = null;
+    
+    this.startMonitoring();
+  }
+  
+  recordRequest(success, responseTime, error = null) {
+    const record = {
+      timestamp: Date.now(),
+      success,
+      responseTime,
+      error: error ? error.name : null
+    };
+    
+    this.requestHistory.push(record);
+    
+    // Manter apenas as últimas N requisições
+    if (this.requestHistory.length > this.windowSize) {
+      this.requestHistory.shift();
+    }
+    
+    this.checkHealth();
+  }
+  
+  checkHealth() {
+    if (this.requestHistory.length < 10) {
+      return; // Não temos dados suficientes
+    }
+    
+    const recentRequests = this.requestHistory.slice(-this.windowSize);
+    const successRate = recentRequests.filter(r => r.success).length / recentRequests.length;
+    
+    const wasHealthy = this.isHealthy;
+    this.isHealthy = successRate >= this.healthThreshold;
+    this.lastHealthCheck = Date.now();
+    
+    if (wasHealthy !== this.isHealthy) {
+      const status = this.isHealthy ? 'SAUDÁVEL' : 'DEGRADADO';
+      console.log(`🏥 Status da API mudou para: ${status} (taxa de sucesso: ${(successRate * 100).toFixed(1)}%)`);
+    }
+  }
+  
+  getHealthStatus() {
+    const recentRequests = this.requestHistory.slice(-this.windowSize);
+    const successCount = recentRequests.filter(r => r.success).length;
+    const avgResponseTime = recentRequests.reduce((sum, r) => sum + r.responseTime, 0) / recentRequests.length;
+    
+    return {
+      healthy: this.isHealthy,
+      successRate: recentRequests.length > 0 ? successCount / recentRequests.length : 0,
+      averageResponseTime: avgResponseTime || 0,
+      totalRequests: this.requestHistory.length,
+      recentRequests: recentRequests.length,
+      lastHealthCheck: this.lastHealthCheck,
+      timestamp: Date.now()
+    };
+  }
+  
+  startMonitoring() {
+    setInterval(() => {
+      const status = this.getHealthStatus();
+      
+      if (!status.healthy) {
+        console.warn('⚠️ API em estado degradado:', status);
+      }
+      
+      // Enviar métricas para sistema de monitoramento
+      this.sendMetrics(status);
+    }, this.checkInterval);
+  }
+  
+  sendMetrics(status) {
+    // Enviar para Prometheus, DataDog, etc.
+    // prometheus.register.getSingleMetric('api_health').set(status.healthy ? 1 : 0);
+    // prometheus.register.getSingleMetric('api_success_rate').set(status.successRate);
+  }
+}
+
+const healthMonitor = new HealthMonitor();
+
+// Integrar com cliente resiliente
+class MonitoredResilientClient extends LoggingResilientClient {
+  async request(fn, context = {}) {
+    const startTime = Date.now();
+    
+    try {
+      const result = await super.request(fn, context);
+      const responseTime = Date.now() - startTime;
+      
+      healthMonitor.recordRequest(true, responseTime);
+      return result;
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      
+      healthMonitor.recordRequest(false, responseTime, error);
+      throw error;
+    }
+  }
+  
+  getHealthStatus() {
+    return {
+      ...super.getHealthStatus(),
+      health: healthMonitor.getHealthStatus()
+    };
+  }
+}
+```
+
+## Implementação Completa
+
+### Cliente Final com Todas as Funcionalidades
+
+```javascript
+class SpeedioClient {
+  constructor(options = {}) {
+    this.username = options.username || process.env.SPEEDIO_USERNAME;
+    this.password = options.password || process.env.SPEEDIO_PASSWORD;
+    this.baseUrl = options.baseUrl || 'https://api-get-leads.speedio.com.br';
+    
+    if (!this.username || !this.password) {
+      throw new Error('Credenciais Speedio são obrigatórias');
+    }
+    
+    this.auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+    
+    // Componentes
+    this.retryManager = new RetryManager(options.retry);
+    this.circuitBreaker = new CircuitBreaker(options.circuitBreaker);
+    this.fallbackManager = new FallbackManager();
+    this.healthMonitor = new HealthMonitor(options.health);
+    this.errorLogger = new ErrorLogger(options.logging);
+    
+    this.setupInterceptors();
+    this.registerFallbacks();
+  }
+  
+  setupInterceptors() {
+    axios.interceptors.response.use(
+      response => response,
+      error => {
+        throw parseSpeedioError(error);
+      }
+    );
+  }
+  
+  registerFallbacks() {
+    this.fallbackManager.registerFallback('buscar_cnpj', async (context, error) => {
+      // Implementar estratégia de fallback para busca de CNPJ
+      const cachedData = this.getFromCache(`cnpj_${context.cnpj}`);
+      if (cachedData) {
+        return cachedData;
+      }
+      throw error;
+    });
+  }
+  
+  async buscarCNPJ(cnpjs, options = {}) {
+    const context = { operation: 'buscar_cnpj', cnpjs };
+    
+    return await this.executeRequest(async () => {
+      const response = await axios.get(`${this.baseUrl}/search_enriched_leads/cnpj`, {
+        params: { cnpjs: JSON.stringify(cnpjs) },
+        headers: this.getHeaders(),
+        timeout: options.timeout || 10000
+      });
+      
+      return response.data;
+    }, context);
+  }
+  
+  async validarDados(dados, options = {}) {
+    const context = { operation: 'validar_dados', count: dados.length };
+    
+    return await this.executeRequest(async () => {
+      const response = await axios.post(`${this.baseUrl}/validate`, 
+        { data: dados },
+        {
+          headers: this.getHeaders(),
+          timeout: options.timeout || 15000
+        }
+      );
+      
+      return response.data;
+    }, context);
+  }
+  
+  async executeRequest(fn, context = {}) {
+    const startTime = Date.now();
+    
+    try {
+      const result = await this.fallbackManager.executeWithFallback(
+        context.operation,
+        () => this.circuitBreaker.execute(
+          () => this.retryManager.executeWithRetry(fn)
+        ),
+        context
+      );
+      
+      const responseTime = Date.now() - startTime;
+      this.healthMonitor.recordRequest(true, responseTime);
+      
+      return result;
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      
+      this.healthMonitor.recordRequest(false, responseTime, error);
+      this.errorLogger.logError(error, context);
+      
+      throw error;
+    }
+  }
+  
+  getHeaders() {
+    return {
+      'Authorization': `Basic ${this.auth}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'Speedio-Client/1.0'
+    };
+  }
+  
+  getStatus() {
+    return {
+      circuitBreaker: this.circuitBreaker.getStatus(),
+      health: this.healthMonitor.getHealthStatus(),
+      timestamp: new Date().toISOString()
+    };
+  }
+  
+  // Métodos de cache (implementar conforme necessário)
+  getFromCache(key) {
+    // Implementar cache (localStorage, Redis, etc.)
+    return null;
+  }
+  
+  setCache(key, data, ttl = 3600) {
+    // Implementar cache
+  }
+}
+
+// Uso do cliente completo
+const client = new SpeedioClient({
+  retry: {
+    maxRetries: 3,
+    baseDelay: 1000
+  },
+  circuitBreaker: {
+    failureThreshold: 5,
+    recoveryTimeout: 60000
+  },
+  health: {
+    checkInterval: 30000,
+    healthThreshold: 0.8
+  },
+  logging: {
+    logLevel: 'error',
+    includeStackTrace: true
+  }
+});
+
+// Exemplos de uso
+try {
+  const empresas = await client.buscarCNPJ(['21071712000171']);
+  console.log('✅ Empresas encontradas:', empresas.length);
+} catch (error) {
+  if (error instanceof AuthenticationError) {
+    console.error('❌ Problema de autenticação - verifique credenciais');
+  } else if (error instanceof RateLimitError) {
+    console.error(`❌ Rate limit - tente novamente em ${error.retryAfter}s`);
+  } else {
+    console.error('❌ Erro inesperado:', error.message);
+  }
+}
+
+// Monitorar status
+setInterval(() => {
+  const status = client.getStatus();
+  if (!status.health.healthy) {
+    console.warn('⚠️ API em estado degradado');
+  }
+}, 60000);
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Melhores Práticas"
+    icon="star"
+    href="/guias/melhores-praticas"
+  >
+    Implemente padrões de excelência no uso da API
+  </Card>
+  
+  <Card
+    title="Monitoramento"
+    icon="chart-line"
+    href="#"
+  >
+    Configure monitoramento e alertas em produção
+  </Card>
+  
+  <Card
+    title="Performance"
+    icon="tachometer-alt"
+    href="#"
+  >
+    Otimize a performance das suas integrações
+  </Card>
+  
+  <Card
+    title="Segurança"
+    icon="shield-alt"
+    href="#"
+  >
+    Implemente práticas avançadas de segurança
+  </Card>
+</CardGroup>
+
+<Note>
+  **Importante**: O tratamento de erros robusto é fundamental para aplicações em produção. Implemente pelo menos retry com backoff exponencial e circuit breaker para garantir a resiliência da sua aplicação.
+</Note>

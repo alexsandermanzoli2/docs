@@ -1,0 +1,75 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Speedio API",
+  "logo": {
+    "dark": "/logo/logo.png",
+    "light": "/logo/logo.png"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#084CBD",
+    "light": "#042358",
+    "dark": "#042358",
+    "anchors": {
+      "from": "#084CBD",
+      "to": "#042358"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Suporte",
+      "url": "mailto:suporte@speedio.com.br"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://app.speedio.com.br"
+  },
+  "anchors": [
+    {
+      "name": "Website",
+      "icon": "globe",
+      "url": "https://speedio.com.br"
+    },
+    {
+      "name": "Status da API",
+      "icon": "signal",
+      "url": "https://status.speedio.com.br"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Começando",
+      "pages": [
+        "introducao",
+        "inicio-rapido"
+      ]
+    },
+    {
+      "group": "Autenticação",
+      "pages": [
+        "autenticacao/visao-geral",
+        "autenticacao/configuracao"
+      ]
+    },
+    {
+      "group": "Endpoints da API",
+      "pages": [
+        "endpoints/buscar-cnpj",
+        "endpoints/buscar-leads",
+        "endpoints/validacao"
+      ]
+    },
+    {
+      "group": "Guias",
+      "pages": [
+        "guias/primeiros-passos",
+        "guias/tratamento-erros",
+        "guias/melhores-praticas"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "linkedin": "https://www.linkedin.com/company/speedio"
+  }
+}

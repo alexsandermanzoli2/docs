@@ -1,0 +1,135 @@
+---
+title: Introdução à API Speedio
+description: 'Documentação completa da API Speedio para busca e enriquecimento de leads B2B'
+---
+
+# Bem-vindo à API Speedio
+
+A API Speedio oferece acesso programático à nossa plataforma de geração e enriquecimento de leads B2B. Com nossa API, você pode buscar informações detalhadas sobre empresas brasileiras, validar dados e enriquecer suas bases de leads.
+
+## O que você pode fazer
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar por CNPJ"
+    icon="building"
+    href="/api/buscar-cnpj"
+  >
+    Obtenha informações completas sobre empresas brasileiras usando CNPJ
+  </Card>
+  <Card
+    title="Dados Enriquecidos"
+    icon="chart-line"
+    href="/api/buscar-leads"
+  >
+    Acesse dados enriquecidos incluindo contatos, telefones e informações financeiras
+  </Card>
+  <Card
+    title="Validação de Dados"
+    icon="check-circle"
+    href="/api/validacao"
+  >
+    Valide e-mails, telefones e outros dados de contato
+  </Card>
+  <Card
+    title="Integração Simples"
+    icon="code"
+    href="/inicio-rapido"
+  >
+    Comece a usar em poucos minutos com nossa documentação clara
+  </Card>
+</CardGroup>
+
+## URL Base da API
+
+```
+https://api-get-leads.speedio.com.br
+```
+
+## Autenticação
+
+A API utiliza **Basic Authentication**. Você precisará de credenciais de acesso fornecidas pela Speedio.
+
+```bash
+Authorization: Basic base64(username:password)
+```
+
+<Warning>
+  **Importante**: Por motivos de segurança, sempre use variáveis de ambiente para armazenar suas credenciais. Nunca inclua credenciais diretamente no código.
+</Warning>
+
+## Formato das Respostas
+
+Todas as respostas da API são retornadas em formato JSON. 
+
+### Exemplo de Resposta Bem-sucedida
+
+```json
+[
+  {
+    "cnpj": "21071712000171",
+    "razao_social": "SPEED IO - SERVICOS ESPECIALIZADOS LTDA",
+    "nome_fantasia": "SPEEDIO",
+    "location": {
+      "uf": "ES",
+      "city": "Colatina",
+      "bairro": "CENTRO",
+      "cep": "29700010"
+    },
+    "website": "https://speedio.com.br/",
+    "qnt_funcionario_empresa": "51 a 100",
+    "faixa_faturamento_empresa": "10M a 30M"
+  }
+]
+```
+
+## Rate Limits
+
+- **100 requisições por minuto** por conta
+- **1000 requisições por hora** por conta
+- Headers de resposta incluem informações sobre limites restantes
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Início Rápido"
+    icon="rocket"
+    href="/inicio-rapido"
+  >
+    Faça sua primeira chamada à API em menos de 5 minutos
+  </Card>
+  <Card
+    title="Configurar Autenticação"
+    icon="lock"
+    href="/autenticacao/configuracao"
+  >
+    Configure suas credenciais de forma segura
+  </Card>
+  <Card
+    title="Buscar por CNPJ"
+    icon="search"
+    href="/api/buscar-cnpj"
+  >
+    Aprenda a buscar empresas por CNPJ
+  </Card>
+  <Card
+    title="Melhores Práticas"
+    icon="lightbulb"
+    href="/guias/melhores-praticas"
+  >
+    Dicas para usar a API de forma eficiente
+  </Card>
+</CardGroup>
+
+## Suporte
+
+Precisa de ajuda? Entre em contato conosco:
+
+- **E-mail**: suporte@speedio.com.br
+- **Documentação**: Esta documentação está sempre atualizada
+- **Status da API**: Verifique o status em tempo real
+
+<Note>
+  Esta documentação é baseada na especificação real da API Speedio e está sempre sincronizada com a versão mais recente.
+</Note>

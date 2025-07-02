@@ -1,0 +1,351 @@
+---
+title: 'Rate Limits'
+description: 'Understand and work within Speedio API rate limits'
+---
+
+## Overview
+
+The Speedio API uses rate limiting to ensure fair usage and maintain service quality for all users. Rate limits are applied on a per-API-key basis.
+
+## Rate Limit Tiers
+
+| Plan | Requests per Minute | Requests per Hour | Requests per Day |
+|------|-------------------|------------------|------------------|
+| Free | 60 | 1,000 | 10,000 |
+| Starter | 100 | 3,000 | 50,000 |
+| Professional | 300 | 10,000 | 200,000 |
+| Enterprise | Custom | Custom | Custom |
+
+<Card
+  title="Need Higher Limits?"
+  icon="rocket"
+  href="mailto:vendas@speedio.com.br"
+>
+  Contact our sales team for custom rate limits
+</Card>
+
+## Rate Limit Headers
+
+Every API response includes headers with rate limit information:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests allowed in the window |
+| `X-RateLimit-Remaining` | Requests remaining in the current window |
+| `X-RateLimit-Reset` | Unix timestamp when the window resets |
+| `X-RateLimit-Retry-After` | Seconds to wait before retrying (only on 429) |
+
+### Example Response Headers
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 42
+X-RateLimit-Reset: 1642435200
+```
+
+## Handling Rate Limits
+
+### Check Remaining Requests
+
+Monitor your rate limit usage:
+
+<CodeGroup>
+
+```javascript JavaScript
+async function makeApiRequest(url, options) {
+  const response = await fetch(url, options);
+  
+  // Check rate limit headers
+  const remaining = response.headers.get('X-RateLimit-Remaining');
+  const reset = response.headers.get('X-RateLimit-Reset');
+  
+  console.log(`Requests remaining: ${remaining}`);
+  
+  if (remaining < 10) {
+    console.warn('Approaching rate limit!');
+  }
+  
+  return response;
+}
+```
+
+```python Python
+import requests
+
+def make_api_request(url, headers):
+    response = requests.get(url, headers=headers)
+    
+    # Check rate limit headers
+    remaining = response.headers.get('X-RateLimit-Remaining')
+    reset = response.headers.get('X-RateLimit-Reset')
+    
+    print(f"Requests remaining: {remaining}")
+    
+    if int(remaining) < 10:
+        print("Warning: Approaching rate limit!")
+    
+    return response
+```
+
+</CodeGroup>
+
+### Handle 429 Errors
+
+When you exceed the rate limit, you'll receive a 429 error:
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Too many requests",
+    "details": {
+      "limit": 100,
+      "window": "1 minute",
+      "retry_after": 45
+    }
+  }
+}
+```
+
+Implement retry logic with exponential backoff:
+
+<CodeGroup>
+
+```javascript JavaScript
+async function requestWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+    
+    if (response.status !== 429) {
+      return response;
+    }
+    
+    // Get retry delay from header or use exponential backoff
+    const retryAfter = response.headers.get('X-RateLimit-Retry-After');
+    const delay = retryAfter 
+      ? parseInt(retryAfter) * 1000 
+      : Math.pow(2, i) * 1000;
+    
+    console.log(`Rate limited. Retrying in ${delay}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+
+```python Python
+import time
+import requests
+
+def request_with_retry(url, headers, max_retries=3):
+    for i in range(max_retries):
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 429:
+            return response
+        
+        # Get retry delay from header or use exponential backoff
+        retry_after = response.headers.get('X-RateLimit-Retry-After')
+        delay = int(retry_after) if retry_after else (2 ** i)
+        
+        print(f"Rate limited. Retrying in {delay} seconds...")
+        time.sleep(delay)
+    
+    raise Exception("Max retries exceeded")
+```
+
+</CodeGroup>
+
+## Best Practices
+
+### 1. Implement Request Queuing
+
+Queue requests to stay within limits:
+
+```javascript
+class RateLimitedQueue {
+  constructor(limit = 100, window = 60000) {
+    this.limit = limit;
+    this.window = window;
+    this.queue = [];
+    this.processing = false;
+  }
+  
+  async add(request) {
+    this.queue.push(request);
+    if (!this.processing) {
+      this.process();
+    }
+  }
+  
+  async process() {
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const batch = this.queue.splice(0, this.limit);
+      
+      // Process batch
+      await Promise.all(batch.map(req => req()));
+      
+      // Wait for window to reset
+      if (this.queue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.window));
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+```
+
+### 2. Use Webhooks Instead of Polling
+
+Replace polling with webhooks to reduce API calls:
+
+```javascript
+// ❌ Bad: Polling every minute
+setInterval(async () => {
+  const leads = await fetchNewLeads();
+  processLeads(leads);
+}, 60000);
+
+// ✅ Good: Use webhooks
+app.post('/webhook/lead.created', (req, res) => {
+  processLead(req.body.data.lead);
+  res.sendStatus(200);
+});
+```
+
+### 3. Cache Responses
+
+Cache responses to reduce redundant API calls:
+
+```javascript
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedData(key, fetcher) {
+  const cached = cache.get(key);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  const data = await fetcher();
+  cache.set(key, { data, timestamp: Date.now() });
+  
+  return data;
+}
+```
+
+### 4. Batch Operations
+
+Combine multiple operations into single requests:
+
+```javascript
+// ❌ Bad: Multiple individual requests
+for (const lead of leads) {
+  await updateLead(lead.id, lead.data);
+}
+
+// ✅ Good: Batch update
+await batchUpdateLeads(leads);
+```
+
+## Rate Limit Monitoring
+
+### Dashboard Metrics
+
+Monitor your API usage in the dashboard:
+
+- Current usage vs. limits
+- Historical usage patterns
+- Rate limit violations
+- API response times
+
+<Card
+  title="View API Usage"
+  icon="chart-line"
+  href="https://app.speedio.com.br/settings/api/usage"
+>
+  Monitor your API usage and rate limits
+</Card>
+
+### Programmatic Monitoring
+
+Track rate limits in your application:
+
+```javascript
+class RateLimitMonitor {
+  constructor() {
+    this.metrics = {
+      totalRequests: 0,
+      rateLimitHits: 0,
+      remainingRequests: null
+    };
+  }
+  
+  trackResponse(response) {
+    this.metrics.totalRequests++;
+    
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    this.metrics.remainingRequests = parseInt(remaining);
+    
+    if (response.status === 429) {
+      this.metrics.rateLimitHits++;
+      console.warn('Rate limit hit!', this.metrics);
+    }
+  }
+  
+  getMetrics() {
+    return this.metrics;
+  }
+}
+```
+
+## Special Considerations
+
+### Burst Limits
+
+Some endpoints have additional burst limits:
+
+- Bulk operations: 10 requests per minute
+- Export endpoints: 5 requests per hour
+- Webhook registration: 20 requests per hour
+
+### Endpoint-Specific Limits
+
+Certain endpoints have their own limits:
+
+| Endpoint | Additional Limit |
+|----------|-----------------|
+| `/v1/leads/bulk` | 1000 leads per request |
+| `/v1/exports` | 5 exports per hour |
+| `/v1/validation/bulk` | 500 emails per request |
+
+## Need Help?
+
+If you're consistently hitting rate limits:
+
+1. Consider upgrading your plan
+2. Optimize your API usage patterns
+3. Contact support for guidance
+
+<CardGroup cols={2}>
+  <Card
+    title="Upgrade Plan"
+    icon="rocket"
+    href="https://app.speedio.com.br/billing/upgrade"
+  >
+    Get higher rate limits
+  </Card>
+  <Card
+    title="Contact Support"
+    icon="headset"
+    href="mailto:suporte@speedio.com.br"
+  >
+    Get help optimizing API usage
+  </Card>
+</CardGroup>

@@ -1,0 +1,146 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate with the Speedio API'
+---
+
+## Overview
+
+The Speedio API uses API keys to authenticate requests. You can view and manage your API keys in the [Speedio Dashboard](https://app.speedio.com.br/settings/api).
+
+<Warning>
+  Your API keys carry many privileges, so be sure to keep them secure! Do not share your secret API keys in publicly accessible areas such as GitHub, client-side code, and so forth.
+</Warning>
+
+## Authentication Methods
+
+### Bearer Token
+
+All API requests must include your API key in the Authorization header:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl https://api.speedio.com.br/v1/leads \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.speedio.com.br/v1/leads', {
+  headers: {
+    'Authorization': 'Bearer YOUR_API_KEY'
+  }
+});
+```
+
+```python Python
+import requests
+
+response = requests.get(
+  'https://api.speedio.com.br/v1/leads',
+  headers={'Authorization': 'Bearer YOUR_API_KEY'}
+)
+```
+
+</CodeGroup>
+
+## API Key Types
+
+### Test API Keys
+
+Test API keys are provided for development and testing:
+
+- Prefixed with `sk_test_`
+- Access to sandbox environment only
+- No charges for API calls
+- Limited to 1,000 requests per day
+
+### Production API Keys
+
+Production API keys are for live integrations:
+
+- Prefixed with `sk_live_`
+- Access to production data
+- Billed according to your plan
+- Higher rate limits
+
+## API Key Management
+
+### Creating an API Key
+
+1. Log in to your [Speedio Dashboard](https://app.speedio.com.br)
+2. Navigate to Settings → API Keys
+3. Click "Create New Key"
+4. Give your key a descriptive name
+5. Select the appropriate permissions
+6. Click "Generate Key"
+
+<Info>
+  Make sure to copy your API key immediately after creation. For security reasons, you won't be able to see it again.
+</Info>
+
+### Key Permissions
+
+You can restrict API keys to specific operations:
+
+- **Read**: Access to GET endpoints
+- **Write**: Access to POST, PUT, DELETE endpoints
+- **Admin**: Full access to all endpoints
+
+### Rotating Keys
+
+We recommend rotating your API keys periodically:
+
+1. Create a new API key
+2. Update your application to use the new key
+3. Verify the new key is working
+4. Delete the old key
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Environment Variables">
+    Store API keys in environment variables, never in your code:
+
+    ```bash
+    export SPEEDIO_API_KEY="sk_live_..."
+    ```
+
+    ```javascript
+    const apiKey = process.env.SPEEDIO_API_KEY;
+    ```
+  </Accordion>
+
+  <Accordion title="Server-Side Only">
+    Never expose API keys in client-side code. Always make API calls from your backend.
+  </Accordion>
+
+  <Accordion title="HTTPS Only">
+    All API requests must be made over HTTPS. Requests over HTTP will be rejected.
+  </Accordion>
+
+  <Accordion title="IP Whitelisting">
+    For additional security, you can whitelist specific IP addresses in your dashboard.
+  </Accordion>
+</AccordionGroup>
+
+## OAuth 2.0 (Coming Soon)
+
+We're working on OAuth 2.0 support for more advanced authentication scenarios. This will enable:
+
+- User-specific access tokens
+- Granular permission scopes
+- Third-party integrations
+
+<Card
+  title="Request OAuth Access"
+  icon="envelope"
+  href="mailto:suporte@speedio.com.br?subject=OAuth Early Access"
+>
+  Contact us for early access to OAuth authentication
+</Card>

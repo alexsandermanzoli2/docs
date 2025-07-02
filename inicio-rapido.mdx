@@ -1,0 +1,334 @@
+---
+title: Início Rápido
+description: 'Faça sua primeira chamada à API Speedio em menos de 5 minutos'
+---
+
+# Início Rápido
+
+Este guia irá ajudá-lo a fazer sua primeira chamada à API Speedio em poucos minutos.
+
+## 1. Configure suas Credenciais
+
+Por motivos de segurança, sempre use variáveis de ambiente para suas credenciais:
+
+```bash
+# Configure as variáveis de ambiente
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha"
+```
+
+<Warning>
+  **Nunca** inclua suas credenciais diretamente no código. Sempre use variáveis de ambiente.
+</Warning>
+
+## 2. Sua Primeira Chamada
+
+Vamos buscar informações sobre uma empresa usando seu CNPJ:
+
+<CodeGroup>
+
+```bash cURL
+# Configure as variáveis primeiro
+export SPEEDIO_USERNAME="seu_usuario"
+export SPEEDIO_PASSWORD="sua_senha"
+
+curl -G \
+  -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+  -H "Content-Type: application/json" \
+  --data-urlencode 'cnpjs=["21071712000171"]' \
+  'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj'
+```
+
+```javascript Node.js
+const axios = require('axios');
+
+// Configure as variáveis de ambiente
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+
+if (!username || !password) {
+  throw new Error('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas');
+}
+
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+async function buscarEmpresa(cnpj) {
+  try {
+    const response = await axios.get(
+      'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+      {
+        params: {
+          cnpjs: JSON.stringify([cnpj])
+        },
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Erro na API:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Exemplo de uso
+buscarEmpresa('21071712000171')
+  .then(data => {
+    console.log('Dados da empresa:', JSON.stringify(data, null, 2));
+  })
+  .catch(error => {
+    console.error('Erro:', error.message);
+  });
+```
+
+```python Python
+import requests
+import json
+import base64
+import os
+
+# Configure as variáveis de ambiente
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+
+if not username or not password:
+    raise ValueError('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas')
+
+# Criar header de autenticação
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+def buscar_empresa(cnpj):
+    """Busca informações de uma empresa por CNPJ"""
+    url = "https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj"
+    
+    params = {
+        'cnpjs': json.dumps([cnpj])
+    }
+    
+    headers = {
+        'Authorization': f'Basic {auth}',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Erro na API: {e}")
+        raise
+
+# Exemplo de uso
+if __name__ == "__main__":
+    try:
+        dados = buscar_empresa('21071712000171')
+        print("Dados da empresa:")
+        print(json.dumps(dados, indent=2, ensure_ascii=False))
+    except Exception as e:
+        print(f"Erro: {e}")
+```
+
+```php PHP
+<?php
+// Configure as variáveis de ambiente
+$username = $_ENV['SPEEDIO_USERNAME'] ?? getenv('SPEEDIO_USERNAME');
+$password = $_ENV['SPEEDIO_PASSWORD'] ?? getenv('SPEEDIO_PASSWORD');
+
+if (!$username || !$password) {
+    throw new Exception('SPEEDIO_USERNAME e SPEEDIO_PASSWORD devem estar definidas');
+}
+
+// Criar header de autenticação
+$auth = base64_encode($username . ':' . $password);
+
+function buscarEmpresa($cnpj) {
+    global $auth;
+    
+    $url = 'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj';
+    $params = http_build_query([
+        'cnpjs' => json_encode([$cnpj])
+    ]);
+    
+    $curl = curl_init();
+    
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url . '?' . $params,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]
+    ]);
+    
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    curl_close($curl);
+    
+    if ($httpCode !== 200) {
+        throw new Exception("Erro na API: HTTP $httpCode");
+    }
+    
+    return json_decode($response, true);
+}
+
+// Exemplo de uso
+try {
+    $dados = buscarEmpresa('21071712000171');
+    echo "Dados da empresa:\n";
+    echo json_encode($dados, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+} catch (Exception $e) {
+    echo "Erro: " . $e->getMessage();
+}
+?>
+```
+
+</CodeGroup>
+
+## 3. Exemplo de Resposta
+
+A API retornará informações detalhadas sobre a empresa:
+
+```json
+[
+  {
+    "cnpj": "21071712000171",
+    "razao_social": "SPEED IO - SERVICOS ESPECIALIZADOS LTDA",
+    "nome_fantasia": "SPEEDIO",
+    "location": {
+      "uf": "ES",
+      "city": "Colatina",
+      "bairro": "CENTRO",
+      "cep": "29700010",
+      "tipo_logradouro": "AVENIDA",
+      "nome_rua": "GETULIO VARGAS",
+      "numero": "196"
+    },
+    "website": "https://speedio.com.br/",
+    "faixa_faturamento_cnpj": "10M a 30M",
+    "faixa_faturamento_empresa": "10M a 30M",
+    "qnt_funcionario_cnpj": "51 a 100",
+    "qnt_funcionario_empresa": "51 a 100",
+    "telefones": {
+      "telefones_validados": [],
+      "telefones_contador": [],
+      "telefones_invalidos": ["11994154146, 1132803375, 11949141380, 1131631068"]
+    },
+    "generic_emails": {
+      "emails_validados": [],
+      "emails_contador": [],
+      "emails_invalidos": ["diogo@speedio.com.br", "atendimento@speedio.com.br"]
+    },
+    "qsa": [
+      {
+        "name": "EDUARDO BRENNAND CAMPOS",
+        "position": "Sócio"
+      },
+      {
+        "name": "DIOGO NASCIMENTO PUBLIO PEREIRA",
+        "position": "Sócio-Administrador"
+      }
+    ],
+    "administrador": "EDUARDO BRENNAND CAMPOS",
+    "data_abertura": "19/09/2014",
+    "idade_empresa": "10 anos",
+    "qnt_filiais": 0,
+    "natureza_juridica": "2062",
+    "cnae_primario": {
+      "cnae": "6203100",
+      "cnae_desc": "Desenvolvimento e licenciamento de programas de computador não-customizáveis"
+    },
+    "cnae_secundario": [
+      {
+        "cnae": "6491300",
+        "cnae_desc": "Sociedades de fomento mercantil - factoring"
+      }
+    ]
+  }
+]
+```
+
+## 4. Tratamento de Erros
+
+Sempre implemente tratamento de erros adequado:
+
+<CodeGroup>
+
+```javascript JavaScript
+try {
+  const dados = await buscarEmpresa('21071712000171');
+  console.log('Sucesso!', dados);
+} catch (error) {
+  if (error.response?.status === 401) {
+    console.error('Credenciais inválidas');
+  } else if (error.response?.status === 429) {
+    console.error('Limite de requisições excedido');
+  } else {
+    console.error('Erro na API:', error.message);
+  }
+}
+```
+
+```python Python
+try:
+    dados = buscar_empresa('21071712000171')
+    print('Sucesso!', dados)
+except requests.exceptions.HTTPError as e:
+    if e.response.status_code == 401:
+        print('Credenciais inválidas')
+    elif e.response.status_code == 429:
+        print('Limite de requisições excedido')
+    else:
+        print(f'Erro HTTP: {e.response.status_code}')
+except Exception as e:
+    print(f'Erro: {e}')
+```
+
+</CodeGroup>
+
+## 5. Próximos Passos
+
+Agora que você fez sua primeira chamada, explore mais recursos:
+
+<CardGroup cols={2}>
+  <Card
+    title="Configurar Autenticação"
+    icon="lock"
+    href="/autenticacao/configuracao"
+  >
+    Aprenda sobre configuração segura de credenciais
+  </Card>
+  <Card
+    title="Buscar Múltiplos CNPJs"
+    icon="list"
+    href="/api/buscar-cnpj"
+  >
+    Como buscar várias empresas de uma vez
+  </Card>
+  <Card
+    title="Tratamento de Erros"
+    icon="exclamation-triangle"
+    href="/guias/tratamento-erros"
+  >
+    Implemente tratamento robusto de erros
+  </Card>
+  <Card
+    title="Melhores Práticas"
+    icon="star"
+    href="/guias/melhores-praticas"
+  >
+    Otimize o uso da API
+  </Card>
+</CardGroup>
+
+## Dúvidas?
+
+<Card
+  title="Precisa de Ajuda?"
+  icon="question"
+  href="mailto:suporte@speedio.com.br"
+>
+  Nossa equipe está pronta para ajudar você
+</Card>

@@ -1,0 +1,132 @@
+---
+title: 'Desenvolvimento'
+description: 'Aprenda como visualizar alterações localmente'
+---
+
+## Local Development
+
+Preview your documentation changes locally before deploying.
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Node.js version 18 or higher
+- npm or yarn package manager
+
+### Installation
+
+<Steps>
+  <Step title="Install Mintlify CLI">
+    Install the Mintlify CLI globally:
+
+    ```bash
+    npm i -g mintlify
+    ```
+  </Step>
+  <Step title="Navigate to your docs folder">
+    ```bash
+    cd speedio-api-docs
+    ```
+  </Step>
+  <Step title="Run the development server">
+    ```bash
+    mintlify dev
+    ```
+  </Step>
+</Steps>
+
+The documentation will be available at `http://localhost:3000`.
+
+### Making Changes
+
+The documentation structure follows these conventions:
+
+- **Pages**: Written in `.mdx` format with frontmatter
+- **Navigation**: Configured in `mint.json`
+- **API Reference**: OpenAPI specifications in the `/api-reference` folder
+- **Images**: Stored in the `/images` folder
+
+### Hot Reload
+
+The development server supports hot reload. Any changes you make to the documentation files will be reflected immediately in your browser.
+
+## Environment Setup
+
+### Sandbox Environment
+
+Use our sandbox environment for testing:
+
+- **Base URL**: `https://sandbox-api.speedio.com.br/v1`
+- **Test API Key**: Available in your dashboard
+
+### Production Environment
+
+For production use:
+
+- **Base URL**: `https://api.speedio.com.br/v1`
+- **Production API Key**: Generate from your dashboard
+
+<Warning>
+  Never expose your production API key in client-side code or public repositories.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="API Key Security">
+    - Store API keys in environment variables
+    - Use server-side code for API calls
+    - Rotate keys regularly
+    - Use IP whitelisting when possible
+  </Accordion>
+
+  <Accordion title="Rate Limiting">
+    - Respect rate limits: 100 requests per minute
+    - Implement exponential backoff for retries
+    - Cache responses when appropriate
+    - Use webhooks for real-time updates instead of polling
+  </Accordion>
+
+  <Accordion title="Error Handling">
+    - Always check response status codes
+    - Implement proper error handling
+    - Log errors for debugging
+    - Provide meaningful error messages to users
+  </Accordion>
+</AccordionGroup>
+
+## SDKs and Libraries
+
+We provide official SDKs for popular programming languages:
+
+<CardGroup cols={2}>
+  <Card
+    title="Node.js SDK"
+    icon="node-js"
+    href="https://github.com/speedio/node-sdk"
+  >
+    Official Node.js/JavaScript SDK
+  </Card>
+  <Card
+    title="Python SDK"
+    icon="python"
+    href="https://github.com/speedio/python-sdk"
+  >
+    Official Python SDK
+  </Card>
+  <Card
+    title="PHP SDK"
+    icon="php"
+    href="https://github.com/speedio/php-sdk"
+  >
+    Official PHP SDK
+  </Card>
+  <Card
+    title="Ruby SDK"
+    icon="gem"
+    href="https://github.com/speedio/ruby-sdk"
+  >
+    Official Ruby SDK
+  </Card>
+</CardGroup>

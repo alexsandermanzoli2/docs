@@ -1,0 +1,274 @@
+---
+title: 'Error Handling'
+description: 'Learn how to handle errors returned by the Speedio API'
+---
+
+## Overview
+
+The Speedio API uses conventional HTTP response codes to indicate the success or failure of an API request. In general:
+
+- **2xx** codes indicate success
+- **4xx** codes indicate an error that failed given the information provided
+- **5xx** codes indicate an error with Speedio's servers
+
+## Error Response Format
+
+All errors return a consistent JSON structure:
+
+```json
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "The request was invalid or cannot be served",
+    "details": {
+      "field": "email",
+      "reason": "Invalid email format"
+    },
+    "request_id": "req_1234567890"
+  }
+}
+```
+
+## Common Error Codes
+
+### 400 Bad Request
+
+The request was invalid or cannot be served.
+
+```json
+{
+  "error": {
+    "code": "bad_request",
+    "message": "Invalid request parameters",
+    "details": {
+      "field": "limit",
+      "reason": "Must be between 1 and 100"
+    }
+  }
+}
+```
+
+### 401 Unauthorized
+
+The request requires authentication.
+
+```json
+{
+  "error": {
+    "code": "unauthorized",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+### 403 Forbidden
+
+The API key doesn't have permissions to perform the request.
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "Insufficient permissions for this operation"
+  }
+}
+```
+
+### 404 Not Found
+
+The requested resource doesn't exist.
+
+```json
+{
+  "error": {
+    "code": "not_found",
+    "message": "Lead not found",
+    "details": {
+      "lead_id": "lead_123"
+    }
+  }
+}
+```
+
+### 429 Too Many Requests
+
+You've exceeded the rate limit.
+
+```json
+{
+  "error": {
+    "code": "rate_limit_exceeded",
+    "message": "Too many requests",
+    "details": {
+      "limit": 100,
+      "window": "1 minute",
+      "retry_after": 45
+    }
+  }
+}
+```
+
+### 500 Internal Server Error
+
+Something went wrong on our end.
+
+```json
+{
+  "error": {
+    "code": "internal_error",
+    "message": "An unexpected error occurred",
+    "request_id": "req_1234567890"
+  }
+}
+```
+
+## Error Handling Best Practices
+
+### Retry Logic
+
+Implement exponential backoff for retrying failed requests:
+
+<CodeGroup>
+
+```javascript JavaScript
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (response.ok) {
+        return await response.json();
+      }
+      
+      // Don't retry client errors
+      if (response.status >= 400 && response.status < 500) {
+        throw new Error(`Client error: ${response.status}`);
+      }
+      
+      // Retry server errors
+      if (i < maxRetries - 1) {
+        const delay = Math.pow(2, i) * 1000; // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      throw new Error(`Server error: ${response.status}`);
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+    }
+  }
+}
+```
+
+```python Python
+import time
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+def make_request_with_retry(url, headers, max_retries=3):
+    session = requests.Session()
+    retry = Retry(
+        total=max_retries,
+        read=max_retries,
+        connect=max_retries,
+        backoff_factor=1,
+        status_forcelist=(500, 502, 504)
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    
+    try:
+        response = session.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        raise
+```
+
+</CodeGroup>
+
+### Error Logging
+
+Log errors with context for debugging:
+
+```javascript
+function logApiError(error, context) {
+  console.error('API Error:', {
+    timestamp: new Date().toISOString(),
+    error: {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      request_id: error.request_id
+    },
+    context: {
+      endpoint: context.endpoint,
+      method: context.method,
+      params: context.params
+    }
+  });
+}
+```
+
+### User-Friendly Messages
+
+Map API errors to user-friendly messages:
+
+```javascript
+const errorMessages = {
+  'unauthorized': 'Please check your API credentials',
+  'rate_limit_exceeded': 'Too many requests. Please try again later',
+  'not_found': 'The requested resource was not found',
+  'internal_error': 'Something went wrong. Please try again later'
+};
+
+function getUserMessage(errorCode) {
+  return errorMessages[errorCode] || 'An unexpected error occurred';
+}
+```
+
+## Validation Errors
+
+For requests that fail validation, we return detailed error information:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Validation failed",
+    "details": {
+      "errors": [
+        {
+          "field": "email",
+          "code": "invalid_format",
+          "message": "Email must be a valid email address"
+        },
+        {
+          "field": "phone",
+          "code": "required",
+          "message": "Phone number is required"
+        }
+      ]
+    }
+  }
+}
+```
+
+## Need Help?
+
+If you encounter persistent errors:
+
+1. Check the `request_id` in the error response
+2. Review our [API Status Page](https://status.speedio.com.br)
+3. Contact support with the request ID
+
+<Card
+  title="Contact Support"
+  icon="life-ring"
+  href="mailto:suporte@speedio.com.br"
+>
+  Include the request_id when contacting support
+</Card>
