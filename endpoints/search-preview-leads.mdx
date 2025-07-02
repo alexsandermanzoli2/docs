@@ -1,0 +1,235 @@
+---
+title: 'Buscar Preview de Leads'
+description: 'Visualize métricas e filtros aplicados antes de realizar uma busca completa'
+---
+
+# Buscar Preview de Leads
+
+Este endpoint permite visualizar métricas e filtros que serão aplicados à sua busca, sem retornar os dados completos. Útil para entender o volume de resultados antes de executar uma busca completa.
+
+## URL do Endpoint
+
+```
+GET https://api-get-leads.speedio.com.br/search_preview_leads
+```
+
+## Parâmetros
+
+### Query Parameters
+
+<ParamField query="cnpjs" type="string" required>
+  Array de CNPJs em formato JSON para busca. Exemplo: `["21071712000171", "12345678000195"]`
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+
+```bash cURL
+curl -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+     -H "Content-Type: application/json" \
+     "https://api-get-leads.speedio.com.br/search_preview_leads?cnpjs=%5B%2221071712000171%22%5D"
+```
+
+```javascript Node.js
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+const response = await fetch('https://api-get-leads.speedio.com.br/search_preview_leads?cnpjs=["21071712000171"]', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Basic ${auth}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+import base64
+import os
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+response = requests.get(
+    'https://api-get-leads.speedio.com.br/search_preview_leads',
+    params={'cnpjs': '["21071712000171"]'},
+    headers={
+        'Authorization': f'Basic {auth}',
+        'Content-Type': 'application/json'
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+$username = $_ENV['SPEEDIO_USERNAME'];
+$password = $_ENV['SPEEDIO_PASSWORD'];
+$auth = base64_encode($username . ':' . $password);
+
+$response = file_get_contents('https://api-get-leads.speedio.com.br/search_preview_leads?cnpjs=["21071712000171"]', false, stream_context_create([
+    'http' => [
+        'header' => [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]
+    ]
+]));
+
+$data = json_decode($response, true);
+```
+
+</CodeGroup>
+
+## Resposta de Sucesso
+
+```json
+{
+  "empty_result": false,
+  "applied_filters": {
+    "cnae": {
+      "cnae1.keyword": ["6203100"]
+    },
+    "locations_uf": {
+      "sg_uf.keyword": ["ES"]
+    },
+    "range_faturamento": ["10M a 30M"],
+    "range_funcionario": ["51 a 100"]
+  },
+  "metrics": {
+    "total_emails": 25,
+    "total_telephones": 18,
+    "total_decision_makers": 12,
+    "total_companies": 1,
+    "count_companies": 1,
+    "count_decision_makers": 12,
+    "count_telephones": 18,
+    "count_emails": 25
+  }
+}
+```
+
+## Estrutura da Resposta
+
+### Campos Principais
+
+<ResponseField name="empty_result" type="boolean">
+  Indica se a busca retornará resultados vazios
+</ResponseField>
+
+<ResponseField name="applied_filters" type="object">
+  Filtros que serão aplicados na busca baseados nos CNPJs fornecidos
+  
+  <Expandable title="Propriedades dos Filtros">
+    <ResponseField name="cnae" type="object">
+      Filtros de CNAE (Classificação Nacional de Atividades Econômicas)
+    </ResponseField>
+    
+    <ResponseField name="locations_uf" type="object">
+      Filtros de localização por UF (Unidade Federativa)
+    </ResponseField>
+    
+    <ResponseField name="range_faturamento" type="array">
+      Faixas de faturamento das empresas
+    </ResponseField>
+    
+    <ResponseField name="range_funcionario" type="array">
+      Faixas de quantidade de funcionários
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metrics" type="object">
+  Métricas quantitativas dos resultados esperados
+  
+  <Expandable title="Métricas Disponíveis">
+    <ResponseField name="total_emails" type="number">
+      Total de e-mails disponíveis
+    </ResponseField>
+    
+    <ResponseField name="total_telephones" type="number">
+      Total de telefones disponíveis
+    </ResponseField>
+    
+    <ResponseField name="total_decision_makers" type="number">
+      Total de tomadores de decisão identificados
+    </ResponseField>
+    
+    <ResponseField name="total_companies" type="number">
+      Total de empresas encontradas
+    </ResponseField>
+    
+    <ResponseField name="count_companies" type="number">
+      Contador de empresas processadas
+    </ResponseField>
+    
+    <ResponseField name="count_decision_makers" type="number">
+      Contador de tomadores de decisão processados
+    </ResponseField>
+    
+    <ResponseField name="count_telephones" type="number">
+      Contador de telefones processados
+    </ResponseField>
+    
+    <ResponseField name="count_emails" type="number">
+      Contador de e-mails processados
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Códigos de Status
+
+| Status | Descrição | Solução |
+|--------|-----------|---------|
+| `200` | ✅ Sucesso - Preview gerado | Continue com a busca completa se necessário |
+| `400` | ❌ Parâmetros inválidos | Verifique o formato do array de CNPJs |
+| `401` | ❌ Não autorizado | Verifique suas credenciais de autenticação |
+| `429` | ⚠️ Limite de taxa excedido | Aguarde antes de fazer nova requisição |
+| `500` | ❌ Erro interno do servidor | Tente novamente ou contate o suporte |
+
+## Casos de Uso
+
+### 1. Validação Antes da Busca
+Use este endpoint para verificar se sua busca retornará resultados úteis antes de consumir sua cota de requisições.
+
+### 2. Análise de Filtros
+Entenda quais filtros serão aplicados automaticamente baseados nos CNPJs fornecidos.
+
+### 3. Estimativa de Volume
+Obtenha métricas sobre quantos dados você pode esperar de uma busca completa.
+
+## Limites e Considerações
+
+- **Rate Limit**: 100 requisições por minuto
+- **CNPJs por Requisição**: Até 100 CNPJs
+- **Cache**: Resultados podem ser cached por alguns minutos
+
+<Warning>
+  **Importante**: Este endpoint fornece apenas uma prévia. Para obter os dados completos, use os endpoints `/search_enriched_leads/cnpj` ou `/search_enriched_leads/decision_makers`.
+</Warning>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar Dados Completos por CNPJ"
+    icon="building"
+    href="/endpoints/search-enriched-leads-cnpj"
+  >
+    Execute a busca completa para obter informações detalhadas das empresas
+  </Card>
+  
+  <Card
+    title="Buscar Tomadores de Decisão"
+    icon="users"
+    href="/endpoints/search-enriched-leads-decision-makers"
+  >
+    Obtenha informações sobre os decision makers das empresas
+  </Card>
+</CardGroup>

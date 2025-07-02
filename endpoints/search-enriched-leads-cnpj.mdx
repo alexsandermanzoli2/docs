@@ -1,0 +1,383 @@
+---
+title: 'Buscar Leads Enriquecidos por CNPJ'
+description: 'Obtenha informações completas e enriquecidas sobre empresas através de seus CNPJs'
+---
+
+# Buscar Leads Enriquecidos por CNPJ
+
+Este endpoint retorna informações completas e enriquecidas sobre empresas brasileiras, incluindo dados cadastrais, financeiros, contatos e muito mais.
+
+## URL do Endpoint
+
+```
+GET https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj
+```
+
+## Parâmetros
+
+### Query Parameters
+
+<ParamField query="cnpjs" type="string" required>
+  Array de CNPJs em formato JSON para busca. Exemplo: `["21071712000171", "12345678000195"]`
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+
+```bash cURL
+curl -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+     -H "Content-Type: application/json" \
+     "https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=%5B%2221071712000171%22%5D"
+```
+
+```javascript Node.js
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+const response = await fetch('https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Basic ${auth}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+import base64
+import os
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+response = requests.get(
+    'https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj',
+    params={'cnpjs': '["21071712000171"]'},
+    headers={
+        'Authorization': f'Basic {auth}',
+        'Content-Type': 'application/json'
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+$username = $_ENV['SPEEDIO_USERNAME'];
+$password = $_ENV['SPEEDIO_PASSWORD'];
+$auth = base64_encode($username . ':' . $password);
+
+$response = file_get_contents('https://api-get-leads.speedio.com.br/search_enriched_leads/cnpj?cnpjs=["21071712000171"]', false, stream_context_create([
+    'http' => [
+        'header' => [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]
+    ]
+]));
+
+$data = json_decode($response, true);
+```
+
+</CodeGroup>
+
+## Resposta de Sucesso
+
+```json
+[
+  {
+    "cnpj": "21071712000171",
+    "razao_social": "SPEED IO - SERVICOS ESPECIALIZADOS LTDA",
+    "nome_fantasia": "SPEEDIO",
+    "location": {
+      "uf": "ES",
+      "city": "Colatina",
+      "bairro": "CENTRO",
+      "cep": "29700010",
+      "tipo_logradouro": "AVENIDA",
+      "nome_rua": "GETULIO VARGAS",
+      "numero": "196"
+    },
+    "website": "https://speedio.com.br/",
+    "faixa_faturamento_cnpj": "10M a 30M",
+    "faixa_faturamento_empresa": "10M a 30M",
+    "qnt_funcionario_cnpj": "51 a 100",
+    "qnt_funcionario_empresa": "51 a 100",
+    "telefones": {
+      "telefones_validados": [],
+      "telefones_contador": [],
+      "telefones_invalidos": ["11994154146, 1132803375, 11949141380, 1131631068"]
+    },
+    "generic_emails": {
+      "emails_validados": [],
+      "emails_contador": [],
+      "emails_invalidos": ["diogo@speedio.com.br", "atendimento@speedio.com.br"]
+    },
+    "qsa": [
+      {
+        "name": "EDUARDO BRENNAND CAMPOS",
+        "position": "Sócio"
+      },
+      {
+        "name": "DIOGO NASCIMENTO PUBLIO PEREIRA",
+        "position": "Sócio-Administrador"
+      },
+      {
+        "name": "BRUNO RONEY GOMES BRUNO",
+        "position": "Sócio"
+      }
+    ],
+    "administrador": "EDUARDO BRENNAND CAMPOS",
+    "data_abertura": "19/09/2014",
+    "idade_empresa": "10 anos",
+    "qnt_filiais": 0,
+    "natureza_juridica": "2062",
+    "cnae_primario": {
+      "cnae": "6203100",
+      "cnae_desc": "Desenvolvimento e licenciamento de programas de computador não-customizáveis"
+    },
+    "cnae_secundario": [
+      {
+        "cnae": "6491300",
+        "cnae_desc": "Sociedades de fomento mercantil - factoring"
+      },
+      {
+        "cnae": "7319002",
+        "cnae_desc": "Promoção de vendas"
+      }
+    ]
+  }
+]
+```
+
+## Estrutura da Resposta
+
+### Dados da Empresa
+
+<ResponseField name="cnpj" type="string">
+  CNPJ da empresa
+</ResponseField>
+
+<ResponseField name="razao_social" type="string">
+  Razão social da empresa
+</ResponseField>
+
+<ResponseField name="nome_fantasia" type="string">
+  Nome fantasia da empresa
+</ResponseField>
+
+### Localização
+
+<ResponseField name="location" type="object">
+  Informações de localização da empresa
+  
+  <Expandable title="Dados de Localização">
+    <ResponseField name="uf" type="string">
+      Unidade Federativa (estado)
+    </ResponseField>
+    
+    <ResponseField name="city" type="string">
+      Cidade
+    </ResponseField>
+    
+    <ResponseField name="bairro" type="string">
+      Bairro
+    </ResponseField>
+    
+    <ResponseField name="cep" type="string">
+      Código postal
+    </ResponseField>
+    
+    <ResponseField name="tipo_logradouro" type="string">
+      Tipo do logradouro (Rua, Avenida, etc.)
+    </ResponseField>
+    
+    <ResponseField name="nome_rua" type="string">
+      Nome da rua/avenida
+    </ResponseField>
+    
+    <ResponseField name="numero" type="string">
+      Número do endereço
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Informações Financeiras e Operacionais
+
+<ResponseField name="website" type="string">
+  Website oficial da empresa
+</ResponseField>
+
+<ResponseField name="faixa_faturamento_cnpj" type="string">
+  Faixa de faturamento baseada no CNPJ
+</ResponseField>
+
+<ResponseField name="faixa_faturamento_empresa" type="string">
+  Faixa de faturamento da empresa
+</ResponseField>
+
+<ResponseField name="qnt_funcionario_cnpj" type="string">
+  Quantidade de funcionários baseada no CNPJ
+</ResponseField>
+
+<ResponseField name="qnt_funcionario_empresa" type="string">
+  Quantidade de funcionários da empresa
+</ResponseField>
+
+### Dados de Contato
+
+<ResponseField name="telefones" type="object">
+  Informações sobre telefones da empresa
+  
+  <Expandable title="Dados de Telefones">
+    <ResponseField name="telefones_validados" type="array">
+      Lista de telefones validados
+    </ResponseField>
+    
+    <ResponseField name="telefones_contador" type="array">
+      Contador de telefones processados
+    </ResponseField>
+    
+    <ResponseField name="telefones_invalidos" type="array">
+      Lista de telefones identificados como inválidos
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generic_emails" type="object">
+  Informações sobre e-mails genéricos da empresa
+  
+  <Expandable title="Dados de E-mails">
+    <ResponseField name="emails_validados" type="array">
+      Lista de e-mails validados
+    </ResponseField>
+    
+    <ResponseField name="emails_contador" type="array">
+      Contador de e-mails processados
+    </ResponseField>
+    
+    <ResponseField name="emails_invalidos" type="array">
+      Lista de e-mails identificados como inválidos
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Informações Societárias
+
+<ResponseField name="qsa" type="array">
+  Quadro Societário e Administrativo
+  
+  <Expandable title="Estrutura do QSA">
+    <ResponseField name="name" type="string">
+      Nome do sócio/administrador
+    </ResponseField>
+    
+    <ResponseField name="position" type="string">
+      Cargo/posição na empresa
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="administrador" type="string">
+  Nome do administrador principal
+</ResponseField>
+
+### Dados Legais e Cadastrais
+
+<ResponseField name="data_abertura" type="string">
+  Data de abertura da empresa (formato DD/MM/AAAA)
+</ResponseField>
+
+<ResponseField name="idade_empresa" type="string">
+  Idade da empresa em formato legível
+</ResponseField>
+
+<ResponseField name="qnt_filiais" type="number">
+  Quantidade de filiais
+</ResponseField>
+
+<ResponseField name="natureza_juridica" type="string">
+  Código da natureza jurídica
+</ResponseField>
+
+### CNAE (Atividades Econômicas)
+
+<ResponseField name="cnae_primario" type="object">
+  CNAE principal da empresa
+  
+  <Expandable title="Estrutura do CNAE">
+    <ResponseField name="cnae" type="string">
+      Código CNAE
+    </ResponseField>
+    
+    <ResponseField name="cnae_desc" type="string">
+      Descrição da atividade econômica
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="cnae_secundario" type="array">
+  Lista de CNAEs secundários da empresa (mesma estrutura do CNAE primário)
+</ResponseField>
+
+## Códigos de Status
+
+| Status | Descrição | Solução |
+|--------|-----------|---------|
+| `200` | ✅ Sucesso - Dados retornados | Processe os dados da resposta |
+| `400` | ❌ Parâmetros inválidos | Verifique o formato do array de CNPJs |
+| `401` | ❌ Não autorizado | Verifique suas credenciais de autenticação |
+| `404` | ❌ CNPJs não encontrados | Verifique se os CNPJs existem e estão corretos |
+| `429` | ⚠️ Limite de taxa excedido | Aguarde antes de fazer nova requisição |
+| `500` | ❌ Erro interno do servidor | Tente novamente ou contate o suporte |
+
+## Casos de Uso
+
+### 1. Enriquecimento de Base de Dados
+Enriqueça sua base de clientes com informações detalhadas usando os CNPJs.
+
+### 2. Prospecção B2B
+Obtenha informações completas sobre empresas prospectadas para personalizar abordagens.
+
+### 3. Análise de Mercado
+Colete dados sobre empresas de um segmento específico para análises de mercado.
+
+### 4. Validação de Informações
+Valide e atualize informações existentes sobre empresas em seu CRM.
+
+## Limites e Considerações
+
+- **Rate Limit**: 100 requisições por minuto
+- **CNPJs por Requisição**: Até 100 CNPJs
+- **Dados Atualizados**: Informações são atualizadas regularmente
+- **Qualidade dos Dados**: Alguns campos podem estar vazios dependendo da disponibilidade
+
+<Warning>
+  **Importante**: Nem todos os campos estarão preenchidos para todas as empresas. A disponibilidade dos dados varia conforme a empresa e as fontes disponíveis.
+</Warning>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar Tomadores de Decisão"
+    icon="users"
+    href="/endpoints/search-enriched-leads-decision-makers"
+  >
+    Obtenha informações sobre os decision makers das empresas
+  </Card>
+  
+  <Card
+    title="Preview de Resultados"
+    icon="eye"
+    href="/endpoints/search-preview-leads"
+  >
+    Visualize métricas antes de fazer a busca completa
+  </Card>
+</CardGroup>

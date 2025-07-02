@@ -1,0 +1,305 @@
+---
+title: 'Buscar Tomadores de Decisão'
+description: 'Obtenha informações detalhadas sobre os decision makers das empresas'
+---
+
+# Buscar Tomadores de Decisão
+
+Este endpoint retorna informações detalhadas sobre os tomadores de decisão (decision makers) das empresas, incluindo perfis profissionais, contatos e dados do LinkedIn.
+
+## URL do Endpoint
+
+```
+GET https://api-get-leads.speedio.com.br/search_enriched_leads/decision_makers
+```
+
+## Parâmetros
+
+### Query Parameters
+
+<ParamField query="cnpjs" type="string" required>
+  Array de CNPJs em formato JSON para busca. Exemplo: `["21071712000171", "12345678000195"]`
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+
+```bash cURL
+curl -H "Authorization: Basic $(echo -n ${SPEEDIO_USERNAME}:${SPEEDIO_PASSWORD} | base64)" \
+     -H "Content-Type: application/json" \
+     "https://api-get-leads.speedio.com.br/search_enriched_leads/decision_makers?cnpjs=%5B%2221071712000171%22%5D"
+```
+
+```javascript Node.js
+const username = process.env.SPEEDIO_USERNAME;
+const password = process.env.SPEEDIO_PASSWORD;
+const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+const response = await fetch('https://api-get-leads.speedio.com.br/search_enriched_leads/decision_makers?cnpjs=["21071712000171"]', {
+  method: 'GET',
+  headers: {
+    'Authorization': `Basic ${auth}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+import base64
+import os
+
+username = os.getenv('SPEEDIO_USERNAME')
+password = os.getenv('SPEEDIO_PASSWORD')
+auth = base64.b64encode(f"{username}:{password}".encode()).decode()
+
+response = requests.get(
+    'https://api-get-leads.speedio.com.br/search_enriched_leads/decision_makers',
+    params={'cnpjs': '["21071712000171"]'},
+    headers={
+        'Authorization': f'Basic {auth}',
+        'Content-Type': 'application/json'
+    }
+)
+
+data = response.json()
+```
+
+```php PHP
+$username = $_ENV['SPEEDIO_USERNAME'];
+$password = $_ENV['SPEEDIO_PASSWORD'];
+$auth = base64_encode($username . ':' . $password);
+
+$response = file_get_contents('https://api-get-leads.speedio.com.br/search_enriched_leads/decision_makers?cnpjs=["21071712000171"]', false, stream_context_create([
+    'http' => [
+        'header' => [
+            'Authorization: Basic ' . $auth,
+            'Content-Type: application/json'
+        ]
+    ]
+]));
+
+$data = json_decode($response, true);
+```
+
+</CodeGroup>
+
+## Resposta de Sucesso
+
+```json
+[
+  {
+    "cnpj": "21071712000171",
+    "decision_makers": [
+      {
+        "summary": "Profissional comercial com mais de 5 anos de experiência. Especialista em atendimento, vendas e planejamento, com destaque em alcançar metas e gerar feedbacks positivos.",
+        "level": "Alto",
+        "last_update_datetime": "2025-07-01T16:55:38.197-03:00",
+        "lkd_url": "https://linkedin.com/in/ACwAAErf9sEBBerfCREVFf-b6BcWgp5BpQl_368",
+        "entityUrn": "urn:li:fs_salesProfile:(ACwAAErf9sEBBerfCREVFf-b6BcWgp5BpQl_368,NAME_SEARCH,GKqI)",
+        "company_name": "Speedio",
+        "clean_lkd_url": "ACwAAErf9sEBBerfCREVFf-b6BcWgp5BpQl_368",
+        "name": "Sanderson França",
+        "mchecker_email": "sanderson.franca@speedio.com.br",
+        "location": "São Paulo, Brasil",
+        "position": "Executivo de vendas",
+        "email_response": "T",
+        "department": "Comercial"
+      },
+      {
+        "summary": "Engenheiro de Produção pela Unesp, Especialista em Negócios Internacionais pela OTH-Regensburg, Pós-graduado em Administração de Empresas e MBA em Gestão de Projetos.",
+        "level": "Alto",
+        "last_update_datetime": "2025-07-01T16:55:38.200-03:00",
+        "lkd_url": "https://linkedin.com/in/ACwAAArDBR0BIYPJl9f-tJz5ClJ_RCEio3F3J6E",
+        "entityUrn": "urn:li:fs_salesProfile:(ACwAAArDBR0BIYPJl9f-tJz5ClJ_RCEio3F3J6E,NAME_SEARCH,g24O)",
+        "company_name": "Speedio",
+        "clean_lkd_url": "ACwAAArDBR0BIYPJl9f-tJz5ClJ_RCEio3F3J6E",
+        "name": "José Rubens Urbini Junior",
+        "mchecker_email": "jose@speedio.com.br",
+        "location": "Manaus, Amazonas, Brasil",
+        "position": "Board of Advisors",
+        "email_response": "T",
+        "department": "Outros"
+      }
+    ]
+  }
+]
+```
+
+## Estrutura da Resposta
+
+### Informações da Empresa
+
+<ResponseField name="cnpj" type="string">
+  CNPJ da empresa consultada
+</ResponseField>
+
+<ResponseField name="decision_makers" type="array">
+  Lista de tomadores de decisão identificados na empresa
+</ResponseField>
+
+### Dados dos Decision Makers
+
+<ResponseField name="name" type="string">
+  Nome completo do decision maker
+</ResponseField>
+
+<ResponseField name="position" type="string">
+  Cargo/posição atual na empresa
+</ResponseField>
+
+<ResponseField name="department" type="string">
+  Departamento ao qual pertence
+  
+  **Valores possíveis**: `Comercial`, `TI`, `Gestão`, `Recursos Humanos`, `Operacional`, `Administrativo`, `Jurídico`, `Outros`
+</ResponseField>
+
+<ResponseField name="level" type="string">
+  Nível hierárquico do decision maker
+  
+  **Valores possíveis**: `Alto`, `Médio`, `Baixo`, `Não classificado`
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  Localização geográfica do profissional
+</ResponseField>
+
+<ResponseField name="company_name" type="string">
+  Nome da empresa onde trabalha
+</ResponseField>
+
+### Informações de Contato
+
+<ResponseField name="mchecker_email" type="string">
+  E-mail profissional validado (quando disponível)
+</ResponseField>
+
+<ResponseField name="email_response" type="string">
+  Status da validação do e-mail
+  
+  **Valores possíveis**: `T` (válido), `F` (inválido), `null` (não verificado)
+</ResponseField>
+
+### Dados do LinkedIn
+
+<ResponseField name="lkd_url" type="string">
+  URL completa do perfil do LinkedIn
+</ResponseField>
+
+<ResponseField name="clean_lkd_url" type="string">
+  ID limpo do perfil do LinkedIn (para uso interno)
+</ResponseField>
+
+<ResponseField name="entityUrn" type="string">
+  URN único do perfil no LinkedIn
+</ResponseField>
+
+### Informações Profissionais
+
+<ResponseField name="summary" type="string">
+  Resumo profissional extraído do perfil do LinkedIn
+</ResponseField>
+
+<ResponseField name="last_update_datetime" type="string">
+  Data e hora da última atualização dos dados (formato ISO 8601)
+</ResponseField>
+
+## Códigos de Status
+
+| Status | Descrição | Solução |
+|--------|-----------|---------|
+| `200` | ✅ Sucesso - Decision makers encontrados | Processe os dados da resposta |
+| `400` | ❌ Parâmetros inválidos | Verifique o formato do array de CNPJs |
+| `401` | ❌ Não autorizado | Verifique suas credenciais de autenticação |
+| `404` | ❌ CNPJs não encontrados | Verifique se os CNPJs existem e estão corretos |
+| `429` | ⚠️ Limite de taxa excedido | Aguarde antes de fazer nova requisição |
+| `500` | ❌ Erro interno do servidor | Tente novamente ou contate o suporte |
+
+## Classificação por Nível
+
+### Alto
+- **C-Level**: CEO, CTO, CFO, CMO
+- **Diretores**: Executivos seniores
+- **VPs**: Vice-presidentes
+- **Sócios**: Proprietários/sócios
+
+### Médio  
+- **Gerentes**: Gerentes de área
+- **Coordenadores**: Coordenadores de equipe
+- **Supervisores**: Supervisores de setor
+
+### Baixo
+- **Analistas**: Analistas seniores
+- **Especialistas**: Especialistas técnicos
+- **Assistentes**: Assistentes de liderança
+
+### Não Classificado
+Profissionais cujo nível hierárquico não foi determinado
+
+## Departamentos Identificados
+
+| Departamento | Descrição |
+|-------------|-----------|
+| **Comercial** | Vendas, Account Management, Customer Success |
+| **TI** | Tecnologia, Desenvolvimento, Produto |
+| **Gestão** | Liderança executiva, Diretoria |
+| **Recursos Humanos** | RH, Recrutamento, People |
+| **Operacional** | Operações, Logística, Produção |
+| **Administrativo** | Administração, Finanças, Controladoria |
+| **Jurídico** | Advocacia, Compliance, Legal |
+| **Outros** | Departamentos não categorizados |
+
+## Casos de Uso
+
+### 1. Vendas B2B Direcionadas
+Identifique os decision makers certos para suas propostas comerciais.
+
+### 2. Account-Based Marketing
+Personalize campanhas focando nos tomadores de decisão específicos.
+
+### 3. Mapeamento de Prospects
+Entenda a estrutura organizacional das empresas-alvo.
+
+### 4. Enriquecimento de CRM
+Adicione informações detalhadas sobre contatos no seu CRM.
+
+### 5. Análise Competitiva
+Identifique profissionais-chave em empresas concorrentes.
+
+## Limites e Considerações
+
+- **Rate Limit**: 100 requisições por minuto
+- **CNPJs por Requisição**: Até 100 CNPJs
+- **Dados Atualizados**: Informações são atualizadas regularmente
+- **Disponibilidade**: Nem todas as empresas terão decision makers identificados
+
+<Note>
+  **Qualidade dos Dados**: As informações são extraídas de perfis públicos do LinkedIn e outras fontes. A disponibilidade e qualidade variam conforme a empresa e a atividade dos profissionais na plataforma.
+</Note>
+
+<Warning>
+  **Importante**: Respeite sempre as políticas de privacidade e termos de uso ao utilizar informações de contato. Use os dados de forma ética e em conformidade com a LGPD.
+</Warning>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Buscar Dados da Empresa"
+    icon="building"
+    href="/endpoints/search-enriched-leads-cnpj"
+  >
+    Obtenha informações completas sobre as empresas
+  </Card>
+  
+  <Card
+    title="Preview de Resultados"
+    icon="eye"
+    href="/endpoints/search-preview-leads"
+  >
+    Visualize métricas antes de fazer a busca completa
+  </Card>
+</CardGroup>

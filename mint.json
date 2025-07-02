@@ -55,9 +55,9 @@
     {
       "group": "Endpoints da API",
       "pages": [
-        "endpoints/buscar-cnpj",
-        "endpoints/buscar-leads",
-        "endpoints/validacao"
+        "endpoints/search-preview-leads",
+        "endpoints/search-enriched-leads-cnpj",
+        "endpoints/search-enriched-leads-decision-makers"
       ]
     },
     {
